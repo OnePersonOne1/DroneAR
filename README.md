@@ -123,12 +123,19 @@ the accuracy comparison. Quick 5-epoch smoke confirmed convergence (mAP50 0.62�
 
 ## Results
 
-### Accuracy (val/test)
+### Accuracy (150 epochs, imgsz 640) — from `weights/metrics.json`
 
-| Model | imgsz | mAP50 | mAP50-95 | Precision | Recall |
-|-------|------:|------:|---------:|----------:|-------:|
-| yolo26n | 640 | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-| yolo26s | 640 | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+| Model | Split | mAP50 | mAP50-95 | Precision | Recall | params | best.pt |
+|-------|-------|------:|---------:|----------:|-------:|-------:|--------:|
+| **yolo26n** (ML2 primary) | val | 0.911 | 0.583 | 0.958 | 0.872 | 2.4M | 5.4 MB |
+| yolo26n | test | **0.951** | 0.648 | 0.963 | 0.922 | | |
+| yolo26s (comparison) | val | 0.929 | 0.617 | 0.963 | 0.903 | 9.5M | 20.3 MB |
+| yolo26s | test | **0.958** | 0.681 | 0.968 | 0.945 | | |
+
+yolo26s gives ~+0.7pp test mAP50 / ~+3pp mAP50-95 over yolo26n for ~4× params and ~4× GFLOPs
+(5.2→20.5). For the ML2 CPU target, **yolo26n is the recommended deploy model**; yolo26s is the
+accuracy ceiling if latency budget allows. Example detection (tiny drone, conf 0.78):
+`docs/demo/`.
 
 ### Export precision (FP32 vs FP16 vs INT8)
 

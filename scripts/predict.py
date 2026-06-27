@@ -34,10 +34,11 @@ def main():
     else:
         source = str(src)
 
+    out = Path(a.out).resolve()                       # absolute -> avoids ultralytics nesting
     model = YOLO(a.weights)
     results = model.predict(source=source, imgsz=a.imgsz, conf=a.conf, device=a.device,
-                            save=True, project=str(Path(a.out).parent),
-                            name=Path(a.out).name, exist_ok=True)
+                            save=True, project=str(out.parent),
+                            name=out.name, exist_ok=True)
     n_det = sum(len(r.boxes) for r in results)
     print(f"images={len(results)}  detections={n_det}  saved -> {a.out}")
 
