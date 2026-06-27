@@ -1,0 +1,9 @@
+# DUT-Anti-UAV in YOLO format (single class). Generated tree from scripts/voc2yolo.py.
+# On another machine: change `path:` to your dut_yolo root (and the compose dataset volume).
+path: /mnt/ssd_0/dataset/dut_yolo
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: drone

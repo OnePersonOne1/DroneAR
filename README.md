@@ -36,14 +36,34 @@ PASCAL VOC structure below (the converter is read-only w.r.t. this tree):
   xml/  *.xml   (VOC: <size>, <object><name>, <bndbox> xmin/ymin/xmax/ymax)
 ```
 
-| Split | Images | XML | Notes |
-|-------|-------:|----:|-------|
-| train | 5200 | 5200 | _filled in Phase 1_ |
-| val   | 2600 | 2600 | _filled in Phase 1_ |
-| test  | 2200 | 2200 | _filled in Phase 1_ |
+| Split | Images | Labels | Boxes | Negatives | Skipped (degenerate) |
+|-------|-------:|-------:|------:|----------:|---------------------:|
+| train | 5200 | 5200 | 5243 | 3 | 0 |
+| val   | 2600 | 2600 | 2620 | 0 | 1 |
+| test  | 2200 | 2200 | 2245 | 0 | 0 |
+| **total** | **10000** | **10000** | **10108** | **3** | **1** |
 
-- Single class: source label `UAV` → mapped to class `0: drone` (`nc=1`).
-- Box-size distribution (small-object share) → see Phase 1. _placeholder_
+- Single class: source label `UAV` (10,109 objects) → mapped to class `0: drone` (`nc=1`).
+- 3 train images have no object → emitted as empty `.txt` negatives. 1 degenerate box (w≤0/h≤0) skipped.
+
+**Convert (read-only w.r.t. source):**
+```bash
+python scripts/voc2yolo.py        # --src /mnt/ssd_0/dataset/DUT  --dst /mnt/ssd_0/dataset/dut_yolo
+python scripts/dataset_stats.py   # box-size histogram + sample box overlays -> dut_yolo/_viz/
+```
+
+**Box-size distribution — small-object-heavy** (drives the imgsz/P2 decision):
+normalized side `sqrt(w·h)`: median **0.0226** (~14.5px @640), p25 0.0163, p75 0.0451, max 0.84.
+
+| Size bin (@imgsz 640) | Share |
+|---|---:|
+| SMALL (<32px side) | **76.6%** |
+| MEDIUM (32–96px) | 13.1% |
+| LARGE (>96px side) | 10.3% |
+| tiny (<13px, norm side <0.02) | 40.6% |
+
+→ Most drones are small/tiny. Baseline stays `imgsz=640` (ML2 target), but **imgsz=960 and a P2
+head are flagged as the primary accuracy levers** for small-object recall (Phase 2 step 3).
 
 ---
 
