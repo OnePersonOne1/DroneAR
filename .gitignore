@@ -1,0 +1,24 @@
+# Python / venv
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Datasets (shared, read-only; never committed)
+datasets/
+dut_yolo/
+*.zip
+
+# Training outputs
+runs/
+*.cache
+
+# Logs / scratch
+.venv_install.log
+*.log
+
+# OS / editor
+.DS_Store
+
+# NOTE: weights/ is intentionally tracked (best.pt, *.onnx, *.tflite, metrics).
+# Large single artifacts (>50MB) go to Git LFS or a GitHub Release (see README).
