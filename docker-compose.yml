@@ -1,0 +1,28 @@
+# Collaborator-reproducible runtime. Usage:
+#   docker compose build
+#   docker compose run --rm dronear python scripts/train.py
+#   docker compose run --rm dronear python scripts/export.py
+#
+# The shared dataset is mounted host-path -> identical container-path so that
+# configs/dut_drone.yaml (which uses an absolute `path:`) works natively AND in
+# the container without edits. On a different machine, adjust the left side of
+# the dataset volume to point at your DUT/dut_yolo location.
+services:
+  dronear:
+    build: .
+    image: dronear:latest
+    ipc: host                      # avoids torch DataLoader shared-memory limits
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    working_dir: /workspace
+    volumes:
+      - /mnt/ssd_0/dataset:/mnt/ssd_0/dataset   # shared dataset (read-only in practice)
+      - ./scripts:/workspace/scripts
+      - ./configs:/workspace/configs
+      - ./weights:/workspace/weights
+      - ./runs:/workspace/runs

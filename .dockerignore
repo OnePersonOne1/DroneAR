@@ -1,0 +1,9 @@
+.venv
+runs
+weights
+datasets
+dut_yolo
+.git
+__pycache__
+*.zip
+*.log

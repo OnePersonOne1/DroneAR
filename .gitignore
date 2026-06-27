@@ -15,10 +15,17 @@ runs/
 
 # Logs / scratch
 .venv_install.log
+.torch_reinstall.log
 *.log
 
-# OS / editor
+# Pretrained checkpoints auto-downloaded to repo root (not our artifacts)
+/yolo26n.pt
+/yolo26s.pt
+/yolo26*.pt
+
+# OS / editor / tooling
 .DS_Store
+.claude/
 
 # NOTE: weights/ is intentionally tracked (best.pt, *.onnx, *.tflite, metrics).
 # Large single artifacts (>50MB) go to Git LFS or a GitHub Release (see README).
