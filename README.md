@@ -10,16 +10,19 @@ End-to-end, reproducible pipeline to train a **YOLO26** drone (UAV) object detec
 - **Model decision:** `yolo26n` (nano) first, **NMS-free one-to-one head kept**, `imgsz=640`,
   INT8 / FP16 export. CPU inference keeps the RDNA2 GPU free for 120Hz AR stereo rendering.
 
-> Status: living document — tables are filled in as each pipeline phase completes.
+> Status: complete pipeline (data → train → eval → ML2 export → bench → Docker verify).
 
 ---
 
 ## Repository layout
 
 ```
-scripts/      voc2yolo.py · train.py · predict.py · export.py · bench_latency.py
-configs/      dut_drone.yaml
-weights/      best.pt(s) · *.onnx (fp32/fp16/int8) · *.tflite · metrics.json · latency_report.md
+scripts/   voc2yolo.py  dataset_stats.py  train.py  train_all.sh
+           eval.py  predict.py  export.py  bench_latency.py
+configs/   dut_drone.yaml
+weights/   yolo26{n,s}_drone_640.pt  yolo26n_drone_640_{fp32,fp16,int8}.onnx
+           metrics.json  latency_report.md
+docs/demo/ example detections
 Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.md
 ```
 
@@ -182,10 +185,39 @@ CPU lacks native fp16 kernels) — it is a size/portability option.
 
 ## Magic Leap 2 deployment (next-step guide)
 
-_Filled in Phase 5._ Recommended path: ONNX (opset17, NMS-free) → ONNX Runtime (+MLSDK C API),
-CPU backend XNNPACK. Output tensor `(1,300,6)` = `[x1,y1,x2,y2,score,class]` (one-to-one head),
-so **no device-side NMS**. App pipeline: ML2 camera frame → preprocess (resize 640, /255, CHW)
-→ ORT infer → score threshold → rescale boxes to native resolution → AR overlay.
+**Recommended artifact:** `weights/yolo26n_drone_640_int8.onnx` (3.0 MB) or the FP32 reference
+`..._fp32.onnx` (9.8 MB). Path: **ONNX (opset 17, NMS-free) → ONNX Runtime (+ MLSDK C API),
+CPU Execution Provider with XNNPACK.** CPU inference leaves the RDNA2 iGPU free for 120 Hz AR
+stereo rendering. (TensorRT/CUDA are unavailable — ML2 is AMD, not NVIDIA.)
+
+**Output tensor** is `(1, 300, 6)` = `[x1, y1, x2, y2, score, class]` from the one-to-one head,
+so the device does **no NMS** — just threshold on `score`. Coordinates are in the 640×640
+letterboxed input space; undo the letterbox (subtract pad, divide by scale) to map to the
+camera frame.
+
+**On-device app pipeline:**
+1. Grab an ML2 camera frame (e.g. via the MLSDK camera/perception APIs).
+2. Preprocess: **letterbox to 640×640, BGR→RGB, `/255`, HWC→CHW, float32** (INT8 model takes
+   the same float input — Q/DQ is internal). *(The repo scripts letterbox to preserve aspect
+   ratio; plain resize-640 also works but distorts small drones.)*
+3. ORT `Run` with the CPU EP (XNNPACK). Set `intra_op_num_threads ≈ 3` to leave a core for
+   rendering/perception.
+4. For each of the 300 rows, keep `score ≥ threshold` (start ~0.25, tune on-device).
+5. Undo letterbox → rescale boxes to native camera resolution.
+6. Render AR overlay (world-anchored quad or HUD marker) at the box.
+
+**If small drones are missed** (this dataset is ~77% small objects): retrain at **`imgsz=960`**
+(`python scripts/train.py --imgsz 960 --name yolo26n_drone_960`) or add a **P2 detection head**
+(`--model yolo26-p2.yaml`, from scratch) for finer stride-4 features, then re-export at the
+larger size. yolo26s is the higher-accuracy fallback if the latency budget allows.
+
+**Limits / honesty:** the latency numbers in this repo are from an x86-64 desktop CPU and are a
+**directional proxy** for the ML2 Zen2 mobile CPU — not a measurement. Confirm real on-device
+latency/accuracy with ADB profiling on ML2. INT8 helps size and single-thread latency most; the
+multi-thread benefit depends on the device's XNNPACK kernels.
+
+**Optional alternative:** TFLite INT8 (`format='tflite', int8=True`) for the ML2 TFLite + NNAPI/
+XNNPACK path — requires a TensorFlow/onnx2tf toolchain not installed here (command in *Reproduce*).
 
 ---
 
