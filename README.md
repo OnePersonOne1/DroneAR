@@ -100,10 +100,24 @@ _Filled across phases. Each step has a Docker and a venv form._
 | Step | Docker | venv |
 |------|--------|------|
 | Convert VOC→YOLO | `docker compose run --rm dronear python scripts/voc2yolo.py` | `python scripts/voc2yolo.py` |
-| Train | `... scripts/train.py` | `python scripts/train.py` |
+| Dataset stats | `... python scripts/dataset_stats.py` | `python scripts/dataset_stats.py` |
+| Train (single) | `... python scripts/train.py --model yolo26n.pt --name yolo26n_drone_640` | `python scripts/train.py ...` |
+| Train (n+s, 150ep) | `... bash scripts/train_all.sh` | `bash scripts/train_all.sh` |
 | Evaluate | _Phase 3_ | _Phase 3_ |
 | Export (ONNX/FP16/INT8) | _Phase 4_ | _Phase 4_ |
 | Latency bench | _Phase 4_ | _Phase 4_ |
+
+**Training config (ML2 baseline):** `yolo26n.pt`, `imgsz=640`, `epochs=150`, `patience=40`,
+`batch=-1` (auto → ~35 on the 4090), `cache=disk`, NMS-free one-to-one head kept. `yolo26s` is
+the accuracy comparison. Quick 5-epoch smoke confirmed convergence (mAP50 0.62→0.81 in 5 epochs).
+
+### Troubleshooting (environment fixes, baked into requirements)
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `cuda.is_available()=False`, "driver too old" | ultralytics pulls torch `cu130`; this host's driver is CUDA 12.8 | install `torch==2.11.0+cu128` (newest cu128 build) |
+| **Bus error (SIGBUS)** at first checkpoint save | `polars` 1.42 wheel SIGBUS on import on this CPU; ultralytics reads `results.csv` via polars every epoch | replace with **`polars-lts-cpu`** |
+| SIGBUS with `cache=ram` | DataLoader shares cached arrays via `/dev/shm` | use `cache=disk` (default) or `--cache False` |
 
 ---
 
