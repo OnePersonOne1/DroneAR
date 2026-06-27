@@ -52,8 +52,10 @@ def letterbox(img, new=640, color=114):
 def export_fp32(weights, imgsz, opset, dst):
     model = YOLO(weights)
     # NMS-free head kept (no end2end/nms args). Static batch=1, fixed imgsz, simplified.
+    # NOTE: do not pass device="cpu" here — ultralytics then sets CUDA_VISIBLE_DEVICES=-1
+    # for the whole process, which forces the FP16 step onto the buggy converter fallback.
     onnx_path = model.export(format="onnx", opset=opset, dynamic=False,
-                             simplify=True, batch=1, imgsz=imgsz, device="cpu")
+                             simplify=True, batch=1, imgsz=imgsz)
     shutil.copy2(onnx_path, dst)
     print(f"[FP32] {dst}")
     return dst
@@ -119,6 +121,10 @@ def export_int8(fp32_path, dst, calib_dir, n, imgsz):
         str(pre), providers=["CPUExecutionProvider"]).get_inputs()[0].name
     reader = CalibReader(calib_dir, n, imgsz, input_name)
 
+    # Quantize ONLY Conv layers. The NMS-free detection head concatenates box coords
+    # (0..640) with scores (0..1) in one tensor; per-tensor activation quantization there
+    # crushes the tiny score values to 0 (model outputs all-zero scores). Keeping the head
+    # and activations in float preserves accuracy while Conv INT8 gives most of the speedup.
     quantize_static(
         model_input=str(pre),
         model_output=str(dst),
@@ -128,6 +134,7 @@ def export_int8(fp32_path, dst, calib_dir, n, imgsz):
         activation_type=QuantType.QUInt8,
         weight_type=QuantType.QInt8,
         calibrate_method=CalibrationMethod.MinMax,
+        op_types_to_quantize=["Conv"],
     )
     pre.unlink(missing_ok=True)
     print(f"[INT8] {dst}  (calibrated on {len(reader.files)} imgs, QDQ per-channel)")
@@ -136,11 +143,20 @@ def export_int8(fp32_path, dst, calib_dir, n, imgsz):
 
 def main():
     a = parse_args()
+    import torch
     out = Path(a.outdir); out.mkdir(parents=True, exist_ok=True)
     stem = a.stem or Path(a.weights).stem
+    fp16_dst = out / f"{stem}_fp16.onnx"
+
+    # FP16 native (half=True) must run BEFORE the FP32 export: ultralytics' ONNX export
+    # disables CUDA for the process, after which FP16 can only use the converter fallback.
+    if not a.skip_fp16 and torch.cuda.is_available():
+        export_fp16(a.weights, None, fp16_dst, a.imgsz, a.opset)
+
     fp32 = export_fp32(a.weights, a.imgsz, a.opset, out / f"{stem}_fp32.onnx")
-    if not a.skip_fp16:
-        export_fp16(a.weights, fp32, out / f"{stem}_fp16.onnx", a.imgsz, a.opset)
+
+    if not a.skip_fp16 and not fp16_dst.exists():   # no GPU -> converter fallback needs fp32
+        export_fp16(a.weights, fp32, fp16_dst, a.imgsz, a.opset)
     if not a.skip_int8:
         export_int8(fp32, out / f"{stem}_int8.onnx", a.calib_dir, a.calib_num, a.imgsz)
 

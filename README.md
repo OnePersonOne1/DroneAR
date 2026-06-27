@@ -82,6 +82,14 @@ The shared dataset is mounted host-path → identical container-path, so `config
 works unchanged in both native and container runs. On another machine, edit the dataset volume
 in `docker-compose.yml` and the `path:` line in the config.
 
+**Reproducibility verified:** `docker compose build` (base `ultralytics/ultralytics:latest` +
+`onnxruntime`/`onnxslim`/`onnxconverter-common`, with stock polars swapped for `polars-lts-cpu`)
+produces a working GPU image (CUDA reachable in-container). Running
+`docker compose run --rm dronear python scripts/export.py --weights weights/yolo26n_drone_640.pt
+--stem yolo26n_drone_640 --outdir weights/docker_verify` inside the container produced the same
+artifacts as the host venv (FP32 9.80 MB, FP16 4.97 MB native-half, INT8 3.01 MB), all loading in
+ORT with output `[1,300,6]`.
+
 ### Option B — venv (fast dev loop)
 
 ```bash
@@ -103,9 +111,15 @@ _Filled across phases. Each step has a Docker and a venv form._
 | Dataset stats | `... python scripts/dataset_stats.py` | `python scripts/dataset_stats.py` |
 | Train (single) | `... python scripts/train.py --model yolo26n.pt --name yolo26n_drone_640` | `python scripts/train.py ...` |
 | Train (n+s, 150ep) | `... bash scripts/train_all.sh` | `bash scripts/train_all.sh` |
-| Evaluate | _Phase 3_ | _Phase 3_ |
-| Export (ONNX/FP16/INT8) | _Phase 4_ | _Phase 4_ |
-| Latency bench | _Phase 4_ | _Phase 4_ |
+| Evaluate (val+test) | `... python scripts/eval.py --weights weights/yolo26n_drone_640.pt` | `python scripts/eval.py ...` |
+| Export ONNX/FP16/INT8 | `... python scripts/export.py --weights weights/yolo26n_drone_640.pt --stem yolo26n_drone_640` | `python scripts/export.py ...` |
+| Latency bench | `... python scripts/bench_latency.py --stem yolo26n_drone_640` | `python scripts/bench_latency.py ...` |
+| Predict demo | `... python scripts/predict.py --weights weights/yolo26n_drone_640.pt` | `python scripts/predict.py ...` |
+
+Optional TFLite INT8 (alternative ML2 path via NNAPI/XNNPACK) — requires a TensorFlow/onnx2tf
+toolchain (not installed here): `python -c "from ultralytics import YOLO;
+YOLO('weights/yolo26n_drone_640.pt').export(format='tflite', int8=True,
+data='configs/dut_drone.yaml', imgsz=640)"`.
 
 **Training config (ML2 baseline):** `yolo26n.pt`, `imgsz=640`, `epochs=150`, `patience=40`,
 `batch=-1` (auto → ~35 on the 4090), `cache=disk`, NMS-free one-to-one head kept. `yolo26s` is
@@ -137,21 +151,32 @@ yolo26s gives ~+0.7pp test mAP50 / ~+3pp mAP50-95 over yolo26n for ~4× params a
 accuracy ceiling if latency budget allows. Example detection (tiny drone, conf 0.78):
 `docs/demo/`.
 
-### Export precision (FP32 vs FP16 vs INT8)
+### Export precision — yolo26n (ML2 primary), imgsz 640, NMS-free head, output `[1,300,6]`
 
-| Model | Precision | File | Size | mAP50 / Δ |
-|-------|-----------|------|-----:|----------:|
-| _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+| Precision | File | Size | Notes |
+|-----------|------|-----:|-------|
+| FP32 | `weights/yolo26n_drone_640_fp32.onnx` | 9.80 MB | reference; opset17, static, simplified |
+| FP16 | `weights/yolo26n_drone_640_fp16.onnx` | 4.97 MB | native `half=True`; float16 I/O |
+| INT8 | `weights/yolo26n_drone_640_int8.onnx` | **3.01 MB** | static PTQ (QDQ), Conv-only, 200-img calib |
 
-### Dev-CPU latency (directional estimate, **not** ML2)
+**INT8 fidelity vs FP32** (same 20 val images, conf 0.25): detections **27 → 27**, all matched
+at IoU≥0.5, mean IoU 0.961, mean |Δscore| 0.075 → negligible accuracy loss.
 
-> ⚠️ Numbers below are ONNX Runtime / XNNPACK on an **x86-64 dev CPU**. They are a
-> *directional* proxy for the ML2 Zen2 mobile CPU. Final figures require on-device
-> ML2 profiling over ADB.
+### Dev-CPU latency (directional estimate, **not** ML2) — `weights/latency_report.md`
 
-| Model | Precision | threads=1 (ms) | threads=4 (ms) |
-|-------|-----------|---------------:|---------------:|
-| _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+> ⚠️ ONNX Runtime / CPUExecutionProvider on an **x86-64 desktop CPU** (i9-13900K). A
+> *directional* proxy for the ML2 Zen2 mobile CPU, **not** a measurement of it. Final
+> figures require on-device ML2 profiling over ADB (the device uses ORT + XNNPACK).
+
+| Precision | threads=1 (ms) | threads=4 (ms) | Size |
+|-----------|---------------:|---------------:|-----:|
+| FP32 | 41.9 ± 1.5 | 12.9 ± 0.5 | 9.80 MB |
+| FP16 | 42.9 ± 0.9 | 13.4 ± 0.3 | 4.97 MB |
+| INT8 | **30.2 ± 0.9** | 14.1 ± 0.4 | **3.01 MB** |
+
+INT8 wins on size and single-thread latency; at 4 threads the Conv-only QDQ dequant overhead
+narrows the gap on x86 (XNNPACK on ML2 behaves differently). FP16 gives no CPU speedup (ORT
+CPU lacks native fp16 kernels) — it is a size/portability option.
 
 ---
 

@@ -166,6 +166,15 @@ def main():
                   f"- matched (IoU≥0.5): {cmp['matched']}",
                   f"- mean |Δscore| on matches: {cmp['mean_score_diff']:.4f}",
                   f"- mean IoU on matches: {cmp['mean_iou']:.4f}"]
+    lines += ["", "## Notes",
+              "- **FP16** has no CPU speedup (ORT CPU has no native fp16 kernels — values are",
+              "  up/down-cast); it is a size/portability option, not a CPU latency win.",
+              "- **INT8** is the smallest model and fastest single-thread. At 4 threads the",
+              "  Conv-only QDQ dequant overhead narrows the gap on this x86 desktop; the ML2",
+              "  target uses ONNX Runtime XNNPACK, which handles INT8 differently — another",
+              "  reason these numbers are directional and need on-device confirmation.",
+              "- INT8 quantizes Conv layers only; the NMS-free detection head stays float so",
+              "  the small score values are not crushed to zero."]
     out.write_text("\n".join(lines) + "\n")
     print(f"\nsaved {out}")
 
