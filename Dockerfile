@@ -5,7 +5,12 @@ FROM ultralytics/ultralytics:latest
 WORKDIR /workspace
 
 # Export / quantization toolchain (ONNX path for Magic Leap 2).
-RUN pip install --no-cache-dir onnxruntime onnxslim onnxconverter-common
+# Also swap polars -> polars-lts-cpu: the stock polars wheel SIGBUSes on import on some
+# CPUs, and ultralytics reads results.csv via polars every epoch (training would crash at
+# the first checkpoint save). See README "Troubleshooting".
+RUN pip install --no-cache-dir onnxruntime onnxslim onnxconverter-common && \
+    pip uninstall -y polars 2>/dev/null || true && \
+    pip install --no-cache-dir polars-lts-cpu
 
 # Project code (datasets + weights + runs are mounted at runtime, not baked in).
 COPY scripts/ ./scripts/

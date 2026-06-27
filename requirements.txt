@@ -1,0 +1,27 @@
+# DroneAR — pinned dev/export toolchain (venv path). See README "Troubleshooting".
+#
+# torch/torchvision: the cu128 build matches this host's CUDA 12.8 driver. ultralytics
+# would otherwise pull a cu130 wheel that reports "driver too old". Install torch from
+# the cu128 index:
+#   pip install torch==2.11.0+cu128 torchvision==0.26.0+cu128 \
+#       --index-url https://download.pytorch.org/whl/cu128
+#   pip install -r requirements.txt
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+
+ultralytics==8.4.80
+
+# ONNX export + INT8 PTQ (Magic Leap 2 path)
+onnx==1.22.0
+onnxruntime==1.27.0
+onnxslim==0.1.94
+onnxconverter-common==1.16.0
+
+# polars-lts-cpu REPLACES polars: the stock polars 1.42 wheel SIGBUSes on import on this
+# CPU, and ultralytics reads results.csv via polars after every epoch -> training crashes
+# at the first checkpoint save. The lts-cpu build fixes it.
+polars-lts-cpu==1.33.1
+
+numpy==2.5.0
+opencv-python==4.13.0.92
+pillow==12.2.0
