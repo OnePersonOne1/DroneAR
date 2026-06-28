@@ -10,7 +10,7 @@
 services:
   dronear:
     build: .
-    image: dronear:latest
+    image: hanmyeongil/yolo26:v1     # Docker Hub: docker compose pull 로 빌드 없이 사용 가능
     ipc: host                      # avoids torch DataLoader shared-memory limits
     deploy:
       resources:
