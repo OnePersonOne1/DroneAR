@@ -47,10 +47,17 @@ torch CUDA (`cuda.Event` timing), FPS = 1000/mean. Measured on **NVIDIA RTX 4090
 | yolo26s | FP32 | 2.44 ± 0.14 | 410 |
 | yolo26s | FP16 | 2.57 ± 0.08 | 389 |
 
-- INT8 (GPU): measured only with a TensorRT engine (the repo INT8 ONNX is CPU/XNNPACK-oriented QDQ Conv-only,
-  not representative on the CUDA EP). Not built → **TODO**: `yolo export model=weights/yolo26n_drone_640.pt
-  format=engine half=True device=0`, then measure with the same protocol.
 - At batch=1 these small models do not saturate the RTX 4090 → launch/memory-bound, so model/precision differences are small.
+
+**Precision vs GPU suitability** (all artifacts are ONNX):
+
+| Precision | Nature | On GPU |
+|-----------|--------|--------|
+| FP32 | neutral (reference) | standard |
+| FP16 | GPU/NPU-friendly (half) | benefits ↑ (no CPU gain — no native fp16 kernels) |
+| INT8 | CPU/XNNPACK-oriented (QDQ Conv-only) | no real INT8 speedup ⚠️ |
+
+INT8 GPU acceleration needs a separate TensorRT INT8 engine (not measured here). Accuracy is device-invariant — only speed differs.
 
 ### Inference speed — CPU (i9-13900K, ONNX Runtime)
 

@@ -46,9 +46,17 @@ torch CUDA(`cuda.Event` 계측), FPS = 1000/mean. 측정 하드웨어 **NVIDIA R
 | yolo26s | FP32 | 2.44 ± 0.14 | 410 |
 | yolo26s | FP16 | 2.57 ± 0.08 | 389 |
 
-- INT8(GPU): TensorRT 엔진 빌드 시에만 측정(이 리포의 INT8 ONNX는 CPU/XNNPACK용 QDQ Conv-only라 GPU(CUDA)에서는 대표적인 INT8 성능이 아님).
-  미빌드 → **TODO**: `yolo export model=weights/yolo26n_drone_640.pt format=engine half=True device=0` 후 동일 프로토콜 측정.
 - batch=1·작은 모델은 RTX 4090을 포화시키지 못해 커널 실행·메모리 대역폭에 묶임(GPU 미포화) → 모델·정밀도 간 차이가 작다.
+
+**정밀도별 GPU 적합성** (산출물은 모두 ONNX):
+
+| 정밀도 | 성격 | GPU |
+|--------|------|-----|
+| FP32 | 중립(기준) | 표준 동작 |
+| FP16 | GPU/NPU 친화(반정밀) | 이득 ↑ (CPU는 native 커널 없어 이득 X) |
+| INT8 | CPU/XNNPACK 지향(QDQ Conv-only) | INT8 가속 못 받음 ⚠️ |
+
+INT8 GPU 가속은 TensorRT 엔진 별도 빌드 필요(현재 미측정). 정확도는 디바이스 불변 — 차이는 속도뿐.
 
 ### 추론 속도 — CPU (i9-13900K, ONNX Runtime)
 
