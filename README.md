@@ -88,13 +88,13 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ## Demo (추론 예시)
 
-test set 추론 결과 — `yolo26n_960`, imgsz 960, conf 0.25. (`demo/`에 image0~9 전체)
+test set 추론 결과 — `yolo26n_640`(메인 배포 모델), imgsz 640, conf 0.25. (`demo/`에 image0~9 전체)
 
 | image0 | image2 | image4 |
 |:---:|:---:|:---:|
 | ![image0](demo/image0.jpg) | ![image2](demo/image2.jpg) | ![image4](demo/image4.jpg) |
 
-재현: `python scripts/predict.py --weights weights/yolo26n_drone_960.pt --imgsz 960 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
+재현: `python scripts/predict.py --weights weights/yolo26n_drone_640.pt --imgsz 640 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
 
 ---
 

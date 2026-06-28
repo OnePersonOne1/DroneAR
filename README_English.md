@@ -90,13 +90,13 @@ imgsz 960 (input `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ## Demo (inference examples)
 
-test set inference — `yolo26n_960`, imgsz 960, conf 0.25. (`demo/` holds image0~9)
+test set inference — `yolo26n_640` (main deploy model), imgsz 640, conf 0.25. (`demo/` holds image0~9)
 
 | image0 | image2 | image4 |
 |:---:|:---:|:---:|
 | ![image0](demo/image0.jpg) | ![image2](demo/image2.jpg) | ![image4](demo/image4.jpg) |
 
-Reproduce: `python scripts/predict.py --weights weights/yolo26n_drone_960.pt --imgsz 960 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
+Reproduce: `python scripts/predict.py --weights weights/yolo26n_drone_640.pt --imgsz 640 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
 
 ---
 
