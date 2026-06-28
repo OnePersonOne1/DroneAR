@@ -1,5 +1,6 @@
 # Python / venv
 .venv/
+.venv_tflite/
 __pycache__/
 *.pyc
 *.pyo
