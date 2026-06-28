@@ -20,16 +20,15 @@ deployment. A reproducible end-to-end pipeline.
 
 ### Accuracy (150 epochs) — `weights/metrics.json` (test split; val in json)
 
-| Model | imgsz | test mAP50 | test mAP50-95 | Precision | Recall | Params(M) | FLOPs(G)@640 | best.pt |
-|-------|------:|----------:|-------------:|----------:|-------:|---------:|------------:|--------:|
+| Model | imgsz | test mAP50 | test mAP50-95 | Precision | Recall | Params(M) | FLOPs(G) | best.pt |
+|-------|------:|----------:|-------------:|----------:|-------:|---------:|--------:|--------:|
 | yolo26n | 640 | 0.951 | 0.648 | 0.963 | 0.922 | 2.4 | 5.2 | 5.4 MB |
-| **yolo26n** | **960** | **0.968** | **0.699** | 0.976 | 0.936 | 2.4 | 5.2 | 5.5 MB |
+| **yolo26n** | **960** | **0.968** | **0.699** | 0.976 | 0.936 | 2.4 | 11.7 | 5.5 MB |
 | yolo26s | 640 | 0.958 | 0.681 | 0.968 | 0.945 | 9.5 | 20.5 | 20.3 MB |
-| **yolo26s** | **960** | **0.970** | **0.723** | 0.981 | 0.956 | 9.5 | 20.5 | 20.4 MB |
+| **yolo26s** | **960** | **0.970** | **0.723** | 0.981 | 0.956 | 9.5 | 46.2 | 20.4 MB |
 
-> Params/FLOPs are hardware-independent complexity. **FLOPs(G)@640**: ultralytics fused,
-> **2×MAC convention** (mul+add each counted = MACs×2), one value per model (precision-independent).
-> This is the @640 architectural complexity; the actual op count at imgsz 960 is ~2.25×.
+> Params/FLOPs are hardware-independent complexity. **FLOPs(G)**: per-row imgsz, ultralytics fused,
+> **2×MAC convention** (mul+add each = MACs×2), precision-independent. FLOPs ∝ input pixels, so 960 ≈ 2.25× of 640.
 
 - imgsz **960 gives +4~5pp test mAP50-95 over 640** (~77% small objects → resolution helps).
   Inference cost rises (input 2.25×).
