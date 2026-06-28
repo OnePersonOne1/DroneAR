@@ -20,18 +20,57 @@
 
 ### 정확도 (150 epochs) — `weights/metrics.json` (test 기준; val 지표는 json 참조)
 
-| 모델 | imgsz | test mAP50 | test mAP50-95 | Precision | Recall | 파라미터 | best.pt |
-|------|------:|----------:|-------------:|----------:|-------:|--------:|--------:|
-| yolo26n | 640 | 0.951 | 0.648 | 0.963 | 0.922 | 2.4M | 5.4 MB |
-| **yolo26n** | **960** | **0.968** | **0.699** | 0.976 | 0.936 | 2.4M | 5.5 MB |
-| yolo26s | 640 | 0.958 | 0.681 | 0.968 | 0.945 | 9.5M | 20.3 MB |
-| **yolo26s** | **960** | **0.970** | **0.723** | 0.981 | 0.956 | 9.5M | 20.4 MB |
+| 모델 | imgsz | test mAP50 | test mAP50-95 | Precision | Recall | Params(M) | FLOPs(G)@640 | best.pt |
+|------|------:|----------:|-------------:|----------:|-------:|---------:|------------:|--------:|
+| yolo26n | 640 | 0.951 | 0.648 | 0.963 | 0.922 | 2.4 | 5.2 | 5.4 MB |
+| **yolo26n** | **960** | **0.968** | **0.699** | 0.976 | 0.936 | 2.4 | 5.2 | 5.5 MB |
+| yolo26s | 640 | 0.958 | 0.681 | 0.968 | 0.945 | 9.5 | 20.5 | 20.3 MB |
+| **yolo26s** | **960** | **0.970** | **0.723** | 0.981 | 0.956 | 9.5 | 20.5 | 20.4 MB |
+
+> Params·FLOPs는 하드웨어 독립 복잡도다. **FLOPs(G)@640**: ultralytics fused 기준, **2×MAC 관례**
+> (곱·합 각 1회 = MACs×2), 정밀도 무관 모델당 1값. @640 아키텍처 복잡도이며 imgsz 960의 실제
+> 연산량은 약 2.25배다.
 
 - imgsz **960이 640 대비 test mAP50-95 +4~5%p** (소형 객체 ~77% → 해상도 효과 큼). 단 추론 비용 ↑(입력 2.25배).
 - 선택 가이드: 지연 우선 **yolo26n 640**, 정확도 우선 **960**. yolo26s는 정확도 상한선(파라미터 약 4배).
 - 예측 예시(작은 드론, conf 0.78): `docs/demo/`.
 
-### Export 정밀도 — yolo26n, imgsz 640, NMS-free head, 출력 `[1,300,6]`
+### 추론 속도 — GPU (RTX 4090)
+
+config: imgsz=640, batch=1(single-stream), warmup=30, iters=200, **순수 forward(전·후처리·NMS 제외)**,
+torch CUDA(`cuda.Event` 계측), FPS = 1000/mean. 측정 하드웨어 **NVIDIA RTX 4090**. 원시 `weights/latency_gpu.md`.
+
+| 모델 | 정밀도 | latency mean±std (ms) | FPS |
+|------|--------|---------------------:|----:|
+| yolo26n | FP32 | 2.40 ± 0.10 | 417 |
+| yolo26n | FP16 | 2.48 ± 0.10 | 403 |
+| yolo26s | FP32 | 2.44 ± 0.14 | 410 |
+| yolo26s | FP16 | 2.57 ± 0.08 | 389 |
+
+- INT8(GPU): TensorRT 엔진 빌드 시에만 측정(리포 INT8 ONNX는 CPU/XNNPACK용 QDQ Conv-only라 CUDA EP 비대표).
+  미빌드 → **TODO**: `yolo export model=weights/yolo26n_drone_640.pt format=engine half=True device=0` 후 동일 프로토콜 측정.
+- batch=1·작은 모델은 RTX 4090을 포화시키지 못해 런치/메모리 바운드 → 모델·정밀도 간 차이가 작다.
+
+### 추론 속도 — CPU (i9-13900K, ONNX Runtime)
+
+config: ORT **CPUExecutionProvider**, imgsz=640, batch=1, warmup=30, iters=200,
+`intra_op_num_threads`=1·4 (inter_op=1, sequential), FPS = 1000/mean. 측정 하드웨어
+**Intel i9-13900K**. 원시 `weights/latency_report.md`.
+
+| 모델 | 정밀도 | 크기(MB) | t=1 ms | t=4 ms | t=1 FPS | t=4 FPS |
+|------|--------|--------:|-------:|-------:|--------:|--------:|
+| yolo26n | FP32 | 9.80 | 44.0 ± 0.5 | 13.2 ± 0.2 | 23 | 76 |
+| yolo26n | FP16 | 4.97 | 45.5 ± 0.8 | 13.9 ± 0.2 | 22 | 72 |
+| yolo26n | INT8 | 3.01 | **33.7 ± 0.9** | 15.1 ± 0.4 | **30** | 66 |
+| yolo26s | FP32 | 38.17 | 149.6 ± 1.4 | 41.3 ± 0.9 | 7 | 24 |
+| yolo26s | FP16 | 19.15 | 151.7 ± 1.5 | 42.4 ± 0.6 | 7 | 24 |
+| yolo26s | INT8 | 10.24 | **86.6 ± 2.0** | 34.6 ± 0.7 | **12** | 29 |
+
+- **FP16**: ORT CPU에 native fp16 커널 없음 → 속도 이득 없음(크기/이식성 옵션).
+- **INT8**: 단일 스레드에서 가장 빠름. Conv-only QDQ라 4스레드에선 dequant 오버헤드로 이점 축소.
+- 속도는 imgsz 640 기준. 960은 미측정(입력 2.25배).
+
+### Export 산출물 (정밀도·크기) — NMS-free head, 출력 `[1,300,6]`
 
 | 정밀도 | 파일 | 크기 | 비고 |
 |--------|------|-----:|------|
@@ -39,30 +78,12 @@
 | FP16 | `weights/yolo26n_drone_640_fp16.onnx` | 4.97 MB | native `half=True`; float16 I/O |
 | INT8 | `weights/yolo26n_drone_640_int8.onnx` | **3.01 MB** | static PTQ(QDQ), Conv-only, 200장 캘리브 |
 
-**INT8 vs FP32** (동일 val 20장, conf 0.25): 탐지 **27→27**, 전부 IoU≥0.5 매칭, 평균 IoU 0.961,
-평균 |Δscore| 0.075 → 저하 미미.
+**INT8 vs FP32** (동일 val 20장, conf 0.25): yolo26n 탐지 27→27(평균 IoU 0.961, |Δscore| 0.075),
+yolo26s 27→26(평균 IoU 0.966, |Δscore| 0.103) → 저하 미미.
 
-비교군 **yolo26s**도 동일 경로 export: FP32 38.2MB / FP16 19.2MB / INT8 10.2MB
-(`weights/yolo26s_drone_640_{fp32,fp16,int8}.onnx`).
-
-**imgsz 960 산출물** (입력 `[1,3,960,960]`, 가중치 동일이라 크기 거의 같음):
-yolo26n_960 FP32 10.0 / FP16 5.1 / INT8 **3.2** MB · yolo26s_960 FP32 38.4 / FP16 19.3 / INT8 10.5 MB
+비교군/해상도 산출물: yolo26s_640 FP32 38.2 / FP16 19.2 / INT8 10.2 MB ·
+imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960 38.4/19.3/10.5 MB
 (`weights/yolo26{n,s}_drone_960_{fp32,fp16,int8}.onnx`).
-
-### Dev-CPU 지연 (방향성 추정치) — `weights/latency_report.md`
-
-> ⚠️ **x86-64 데스크톱 CPU**(i9-13900K) ORT / CPUExecutionProvider 측정. 모바일 CPU의 *방향성*
-> 추정치이며 실측 **아님**. 최종 수치는 타깃 디바이스 on-device 프로파일링 필요.
-
-| 정밀도 | threads=1 (ms) | threads=4 (ms) | 크기 |
-|--------|---------------:|---------------:|-----:|
-| FP32 | 41.9 ± 1.5 | 12.9 ± 0.5 | 9.80 MB |
-| FP16 | 42.9 ± 0.9 | 13.4 ± 0.3 | 4.97 MB |
-| INT8 | **30.2 ± 0.9** | 14.1 ± 0.4 | **3.01 MB** |
-
-INT8: 크기·단일 스레드 지연 유리. 4 스레드는 Conv-only QDQ dequant 오버헤드로 x86 격차 축소.
-FP16: CPU 속도 이득 없음(ORT CPU에 native fp16 커널 없음) → 크기/이식성 옵션.
-표는 imgsz 640 yolo26n 기준. **960은 입력 2.25배라 지연 비례 증가 예상**(미측정).
 
 ---
 
@@ -86,11 +107,11 @@ INT8 모델도 입력은 float32다(Q/DQ는 그래프 내부 처리). 권장 con
 
 ```
 scripts/   voc2yolo.py  dataset_stats.py  train.py  train_all.sh
-           eval.py  predict.py  export.py  bench_latency.py
+           eval.py  predict.py  export.py  bench_latency.py  bench_gpu.py
 configs/   dut_drone.yaml
 weights/   yolo26{n,s}_drone_{640,960}.pt
            yolo26{n,s}_drone_{640,960}_{fp32,fp16,int8}.onnx
-           metrics.json  latency_report.md
+           metrics.json  latency_report.md(CPU)  latency_gpu.md(GPU)
 docs/demo/ 예측 예시 이미지
 Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.md
 ```
@@ -198,7 +219,8 @@ python scripts/train.py
 | 학습(n+s, 150ep) | `... bash scripts/train_all.sh` | `bash scripts/train_all.sh` |
 | 평가(val+test) | `... python scripts/eval.py --weights weights/yolo26n_drone_640.pt` | `python scripts/eval.py ...` |
 | Export ONNX/FP16/INT8 | `... python scripts/export.py --weights weights/yolo26n_drone_640.pt --stem yolo26n_drone_640` | `python scripts/export.py ...` |
-| 지연 벤치 | `... python scripts/bench_latency.py --stem yolo26n_drone_640` | `python scripts/bench_latency.py ...` |
+| 속도 벤치 GPU(4090) | `... python scripts/bench_gpu.py` | `python scripts/bench_gpu.py` |
+| 속도 벤치 CPU(ORT) | `... python scripts/bench_latency.py --stems yolo26n_drone_640 yolo26s_drone_640` | `python scripts/bench_latency.py ...` |
 | 예측 데모 | `... python scripts/predict.py --weights weights/yolo26n_drone_640.pt` | `python scripts/predict.py ...` |
 
 **학습 설정(ML2 baseline):** `yolo26n.pt`, `imgsz=640`, `epochs=150`, `patience=40`,
