@@ -138,7 +138,7 @@ def main():
             cells = {t: bench(path, a.imgsz, a.runs, a.warmup, t) for t in a.threads}
             table.append((stem, name, size, cells))
             print(f"{stem} {name}: size={size:.2f}MB " +
-                  " ".join(f"t{t}={cells[t][0]:.2f}±{cells[t][1]:.2f}ms({1000/cells[t][0]:.0f}fps)"
+                  " ".join(f"threads{t}={cells[t][0]:.2f}±{cells[t][1]:.2f}ms({1000/cells[t][0]:.0f}fps)"
                            for t in a.threads))
         fp32p, int8p = wd / f"{stem}_fp32.onnx", wd / f"{stem}_int8.onnx"
         if fp32p.exists() and int8p.exists():
@@ -157,8 +157,8 @@ def main():
          f"- warmup={a.warmup}, iters={a.runs}, intra_op_num_threads={th} (inter_op=1, sequential)",
          "- FPS = 1000 / mean_latency_ms", "",
          "| 모델 | 정밀도 | 크기(MB) | " +
-         " | ".join(f"t={t} mean±std(ms)" for t in th) + " | " +
-         " | ".join(f"t={t} FPS" for t in th) + " |",
+         " | ".join(f"threads={t} mean±std(ms)" for t in th) + " | " +
+         " | ".join(f"threads={t} FPS" for t in th) + " |",
          "|---|---|---:|" + "---:|" * (2 * len(th))]
     for stem, name, size, cells in table:
         ms = " | ".join(f"{cells[t][0]:.2f} ± {cells[t][1]:.2f}" for t in th)

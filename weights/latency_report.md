@@ -6,7 +6,7 @@
 - warmup=30, iters=200, intra_op_num_threads=[1, 4] (inter_op=1, sequential)
 - FPS = 1000 / mean_latency_ms
 
-| 모델 | 정밀도 | 크기(MB) | t=1 mean±std(ms) | t=4 mean±std(ms) | t=1 FPS | t=4 FPS |
+| 모델 | 정밀도 | 크기(MB) | threads=1 mean±std(ms) | threads=4 mean±std(ms) | threads=1 FPS | threads=4 FPS |
 |---|---|---:|---:|---:|---:|---:|
 | yolo26n_drone_640 | FP32 | 9.80 | 43.99 ± 0.49 | 13.19 ± 0.20 | 23 | 76 |
 | yolo26n_drone_640 | FP16 | 4.97 | 45.47 ± 0.82 | 13.86 ± 0.24 | 22 | 72 |

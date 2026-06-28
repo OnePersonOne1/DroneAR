@@ -57,8 +57,8 @@ config: ORT **CPUExecutionProvider**, imgsz=640, batch=1, warmup=30, iters=200,
 `intra_op_num_threads`=1·4 (inter_op=1, sequential), FPS = 1000/mean. 측정 하드웨어
 **Intel i9-13900K**. 원시 `weights/latency_report.md`.
 
-| 모델 | 정밀도 | 크기(MB) | t=1 ms | t=4 ms | t=1 FPS | t=4 FPS |
-|------|--------|--------:|-------:|-------:|--------:|--------:|
+| 모델 | 정밀도 | 크기(MB) | threads=1 ms | threads=4 ms | threads=1 FPS | threads=4 FPS |
+|------|--------|--------:|------------:|------------:|-------------:|-------------:|
 | yolo26n | FP32 | 9.80 | 44.0 ± 0.5 | 13.2 ± 0.2 | 23 | 76 |
 | yolo26n | FP16 | 4.97 | 45.5 ± 0.8 | 13.9 ± 0.2 | 22 | 72 |
 | yolo26n | INT8 | 3.01 | **33.7 ± 0.9** | 15.1 ± 0.4 | **30** | 66 |
