@@ -33,7 +33,7 @@ deployment. A reproducible end-to-end pipeline.
 - imgsz **960 gives +4~5pp test mAP50-95 over 640** (~77% small objects → resolution helps).
   Inference cost rises (input 2.25×).
 - Guide: latency-first → **yolo26n 640**; accuracy-first → **960**. yolo26s is the accuracy ceiling (~4× params).
-- Example detection (small drone, conf 0.78): `docs/demo/`.
+- Inference examples: see the [Demo](#demo-inference-examples) section below.
 
 ### Inference speed — GPU (RTX 4090)
 
@@ -88,6 +88,18 @@ imgsz 960 (input `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ---
 
+## Demo (inference examples)
+
+test set inference — `yolo26n_960`, imgsz 960, conf 0.25. (`demo/` holds image0~9)
+
+| image0 | image2 | image4 |
+|:---:|:---:|:---:|
+| ![image0](demo/image0.jpg) | ![image2](demo/image2.jpg) | ![image4](demo/image4.jpg) |
+
+Reproduce: `python scripts/predict.py --weights weights/yolo26n_drone_960.pt --imgsz 960 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
+
+---
+
 ## Model spec (I/O)
 
 The I/O contract needed to integrate the ONNX into an inference engine (imgsz 640 model; the 960
@@ -114,7 +126,7 @@ configs/   dut_drone.yaml
 weights/   yolo26{n,s}_drone_{640,960}.pt
            yolo26{n,s}_drone_{640,960}_{fp32,fp16,int8}.onnx
            metrics.json  latency_report.md(CPU)  latency_gpu.md(GPU)
-docs/demo/ example detections
+demo/      inference example images (image0~9; README shows 0/2/4)
 Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.md
 ```
 

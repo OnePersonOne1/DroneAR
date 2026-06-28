@@ -32,7 +32,7 @@
 
 - imgsz **960이 640 대비 test mAP50-95 +4~5%p** (소형 객체 ~77% → 해상도 효과 큼). 단 추론 비용 ↑(입력 2.25배).
 - 선택 가이드: 지연 우선 **yolo26n 640**, 정확도 우선 **960**. yolo26s는 정확도 상한선(파라미터 약 4배).
-- 예측 예시(작은 드론, conf 0.78): `docs/demo/`.
+- 추론 예시: 아래 [Demo](#demo-추론-예시) 섹션.
 
 ### 추론 속도 — GPU (RTX 4090)
 
@@ -86,6 +86,18 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ---
 
+## Demo (추론 예시)
+
+test set 추론 결과 — `yolo26n_960`, imgsz 960, conf 0.25. (`demo/`에 image0~9 전체)
+
+| image0 | image2 | image4 |
+|:---:|:---:|:---:|
+| ![image0](demo/image0.jpg) | ![image2](demo/image2.jpg) | ![image4](demo/image4.jpg) |
+
+재현: `python scripts/predict.py --weights weights/yolo26n_drone_960.pt --imgsz 960 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
+
+---
+
 ## 모델 상세 (I/O)
 
 ONNX를 추론 엔진에 통합할 때 필요한 입출력 방식에 대해서 간략히 설명한다 (imgsz 640 모델 기준; 960 변형은 입력·좌표가 960).
@@ -111,7 +123,7 @@ configs/   dut_drone.yaml
 weights/   yolo26{n,s}_drone_{640,960}.pt
            yolo26{n,s}_drone_{640,960}_{fp32,fp16,int8}.onnx
            metrics.json  latency_report.md(CPU)  latency_gpu.md(GPU)
-docs/demo/ 예측 예시 이미지
+demo/      추론 예시 이미지 (image0~9; README엔 0/2/4)
 Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.md
 ```
 
