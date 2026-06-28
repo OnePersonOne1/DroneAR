@@ -54,7 +54,7 @@ torch CUDA(`cuda.Event` 계측), FPS = 1000/mean. 측정 하드웨어 **NVIDIA R
 |--------|------|-----|
 | FP32 | 중립(기준) | 표준 동작 |
 | FP16 | GPU/NPU 친화(반정밀) | 이득 ↑ (CPU는 native 커널 없어 이득 X) |
-| INT8 | CPU/XNNPACK 지향(QDQ Conv-only) | INT8 가속 못 받음 ⚠️ |
+| INT8 | CPU/XNNPACK 지향(QDQ Conv-only) | INT8 가속 못 받음 ⚠️: 그러나 ML2 환경에서는 가장 적합할 것으로 예상. |
 
 INT8 GPU 가속은 TensorRT 엔진 별도 빌드 필요(현재 미측정). 정확도는 디바이스 불변 — 차이는 속도뿐.
 
