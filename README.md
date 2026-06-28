@@ -10,7 +10,7 @@
   AOSP Android 10 (API 29). **NVIDIA 아님** → 디바이스 TensorRT/CUDA 불가.
   검증 경로: **ONNX → ONNX Runtime(+MLSDK C API), CPU 백엔드 XNNPACK.**
 - **모델 결정:** `yolo26n`(nano) 우선, **NMS-free one-to-one head 유지**, `imgsz=640`,
-  INT8/FP16 export. CPU 추론으로 RDNA2 GPU는 120Hz AR 스테레오 렌더링에 양보.
+  INT8/FP16 export.
 
 > 상태: 전체 파이프라인 완료 (데이터 → 학습 → 평가 → ML2 export → 벤치 → Docker 검증).
 
