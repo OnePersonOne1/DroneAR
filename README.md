@@ -16,6 +16,51 @@
 
 ---
 
+## 성능 지표 (모델 선택 기준)
+
+### 정확도 (150 epochs, imgsz 640) — `weights/metrics.json`
+
+| 모델 | Split | mAP50 | mAP50-95 | Precision | Recall | 파라미터 | best.pt |
+|------|-------|------:|---------:|----------:|-------:|--------:|--------:|
+| **yolo26n** (메인) | val | 0.911 | 0.583 | 0.958 | 0.872 | 2.4M | 5.4 MB |
+| yolo26n | test | **0.951** | 0.648 | 0.963 | 0.922 | | |
+| yolo26s (비교군) | val | 0.929 | 0.617 | 0.963 | 0.903 | 9.5M | 20.3 MB |
+| yolo26s | test | **0.958** | 0.681 | 0.968 | 0.945 | | |
+
+yolo26s: yolo26n 대비 test mAP50 +0.7%p / mAP50-95 +3%p, 단 파라미터·GFLOPs 약 4배(5.2→20.5).
+CPU 추론 타깃 → **yolo26n 권장**, 여유 시 yolo26s가 정확도 상한선. 예측 예시(작은 드론, conf 0.78):
+`docs/demo/`.
+
+### Export 정밀도 — yolo26n, imgsz 640, NMS-free head, 출력 `[1,300,6]`
+
+| 정밀도 | 파일 | 크기 | 비고 |
+|--------|------|-----:|------|
+| FP32 | `weights/yolo26n_drone_640_fp32.onnx` | 9.80 MB | 기준; opset17, static, simplified |
+| FP16 | `weights/yolo26n_drone_640_fp16.onnx` | 4.97 MB | native `half=True`; float16 I/O |
+| INT8 | `weights/yolo26n_drone_640_int8.onnx` | **3.01 MB** | static PTQ(QDQ), Conv-only, 200장 캘리브 |
+
+**INT8 vs FP32** (동일 val 20장, conf 0.25): 탐지 **27→27**, 전부 IoU≥0.5 매칭, 평균 IoU 0.961,
+평균 |Δscore| 0.075 → 저하 미미.
+
+비교군 **yolo26s**도 동일 경로 export: FP32 38.2MB / FP16 19.2MB / INT8 10.2MB
+(`weights/yolo26s_drone_640_{fp32,fp16,int8}.onnx`).
+
+### Dev-CPU 지연 (방향성 추정치) — `weights/latency_report.md`
+
+> ⚠️ **x86-64 데스크톱 CPU**(i9-13900K) ORT / CPUExecutionProvider 측정. 모바일 CPU의 *방향성*
+> 추정치이며 실측 **아님**. 최종 수치는 타깃 디바이스 on-device 프로파일링 필요.
+
+| 정밀도 | threads=1 (ms) | threads=4 (ms) | 크기 |
+|--------|---------------:|---------------:|-----:|
+| FP32 | 41.9 ± 1.5 | 12.9 ± 0.5 | 9.80 MB |
+| FP16 | 42.9 ± 0.9 | 13.4 ± 0.3 | 4.97 MB |
+| INT8 | **30.2 ± 0.9** | 14.1 ± 0.4 | **3.01 MB** |
+
+INT8: 크기·단일 스레드 지연 유리. 4 스레드는 Conv-only QDQ dequant 오버헤드로 x86 격차 축소.
+FP16: CPU 속도 이득 없음(ORT CPU에 native fp16 커널 없음) → 크기/이식성 옵션.
+
+---
+
 ## 리포지토리 구조
 
 ```
@@ -130,53 +175,6 @@ python scripts/train.py
 | **Bus error(SIGBUS)** — 첫 체크포인트 저장 시 | `polars` 1.42 휠 import SIGBUS; ultralytics가 매 epoch `results.csv`를 polars로 읽음 | **`polars-lts-cpu`** 교체 |
 | `cache=ram` SIGBUS | DataLoader가 캐시 배열을 `/dev/shm` 공유 | `cache=disk`(기본) 또는 `--cache False` |
 | TFLite export 실패 (`tf.tile_36` rank 에러) | onnx2tf 1.28.8이 YOLO26 NMS-free head `Tile` 미지원 | ONNX 경로 사용; 필요시 onnx2tf 버전/`param_replacement.json` |
-
----
-
-## 결과
-
-### 정확도 (150 epochs, imgsz 640) — `weights/metrics.json`
-
-| 모델 | Split | mAP50 | mAP50-95 | Precision | Recall | 파라미터 | best.pt |
-|------|-------|------:|---------:|----------:|-------:|--------:|--------:|
-| **yolo26n** (ML2 메인) | val | 0.911 | 0.583 | 0.958 | 0.872 | 2.4M | 5.4 MB |
-| yolo26n | test | **0.951** | 0.648 | 0.963 | 0.922 | | |
-| yolo26s (비교군) | val | 0.929 | 0.617 | 0.963 | 0.903 | 9.5M | 20.3 MB |
-| yolo26s | test | **0.958** | 0.681 | 0.968 | 0.945 | | |
-
-yolo26s: yolo26n 대비 test mAP50 +0.7%p / mAP50-95 +3%p, 단 파라미터·GFLOPs 약 4배(5.2→20.5).
-ML2 CPU 타깃 → **yolo26n 권장**, 여유 시 yolo26s가 정확도 상한선. 예측 예시(작은 드론, conf 0.78):
-`docs/demo/`.
-
-### Export 정밀도 — yolo26n (ML2 메인), imgsz 640, NMS-free head, 출력 `[1,300,6]`
-
-| 정밀도 | 파일 | 크기 | 비고 |
-|--------|------|-----:|------|
-| FP32 | `weights/yolo26n_drone_640_fp32.onnx` | 9.80 MB | 기준; opset17, static, simplified |
-| FP16 | `weights/yolo26n_drone_640_fp16.onnx` | 4.97 MB | native `half=True`; float16 I/O |
-| INT8 | `weights/yolo26n_drone_640_int8.onnx` | **3.01 MB** | static PTQ(QDQ), Conv-only, 200장 캘리브 |
-
-**INT8 vs FP32** (동일 val 20장, conf 0.25): 탐지 **27→27**, 전부 IoU≥0.5 매칭, 평균 IoU 0.961,
-평균 |Δscore| 0.075 → 저하 미미.
-
-비교군 **yolo26s**도 동일 경로 export: FP32 38.2MB / FP16 19.2MB / INT8 10.2MB
-(`weights/yolo26s_drone_640_{fp32,fp16,int8}.onnx`).
-
-### Dev-CPU 지연 (방향성 추정치, **ML2 아님**) — `weights/latency_report.md`
-
-> ⚠️ **x86-64 데스크톱 CPU**(i9-13900K) ORT / CPUExecutionProvider 측정. ML2 Zen2 모바일 CPU의
-> *방향성* 추정치이며 실측 **아님**. 최종 수치는 ML2 on-device ADB 프로파일링 필요(디바이스는
-> ORT + XNNPACK).
-
-| 정밀도 | threads=1 (ms) | threads=4 (ms) | 크기 |
-|--------|---------------:|---------------:|-----:|
-| FP32 | 41.9 ± 1.5 | 12.9 ± 0.5 | 9.80 MB |
-| FP16 | 42.9 ± 0.9 | 13.4 ± 0.3 | 4.97 MB |
-| INT8 | **30.2 ± 0.9** | 14.1 ± 0.4 | **3.01 MB** |
-
-INT8: 크기·단일 스레드 지연 유리. 4 스레드는 Conv-only QDQ dequant 오버헤드로 x86 격차 축소
-(ML2 XNNPACK은 동작 다름). FP16: CPU 속도 이득 없음(ORT CPU에 native fp16 커널 없음) → 크기/이식성
-옵션.
 
 ---
 
