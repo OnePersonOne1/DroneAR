@@ -20,8 +20,8 @@ deployment. A reproducible end-to-end pipeline.
 
 ### Accuracy (150 epochs) — `weights/metrics.json` (test split; val in json)
 
-| Model | imgsz | test mAP50 | test mAP50-95 | Precision | Recall | Params(M) | FLOPs(G) | best.pt |
-|-------|------:|----------:|-------------:|----------:|-------:|---------:|--------:|--------:|
+| Model | imgsz | mAP50 | mAP50-95 | Precision | Recall | Params(M) | FLOPs(G) | best.pt |
+|-------|------:|------:|---------:|----------:|-------:|---------:|--------:|--------:|
 | yolo26n | 640 | 0.951 | 0.648 | 0.963 | 0.922 | 2.4 | 5.2 | 5.4 MB |
 | **yolo26n** | **960** | **0.968** | **0.699** | 0.976 | 0.936 | 2.4 | 11.7 | 5.5 MB |
 | yolo26s | 640 | 0.958 | 0.681 | 0.968 | 0.945 | 9.5 | 20.5 | 20.3 MB |
