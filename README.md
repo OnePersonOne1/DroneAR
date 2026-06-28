@@ -180,38 +180,15 @@ INT8: 크기·단일 스레드 지연 유리. 4 스레드는 Conv-only QDQ dequa
 
 ---
 
-## Magic Leap 2 배포 (다음 단계 가이드)
+## 개선 옵션 (소형 객체)
 
-**권장 산출물:** `weights/yolo26n_drone_640_int8.onnx`(3.0MB) 또는 FP32 기준본 `..._fp32.onnx`(9.8MB).
-경로: **ONNX(opset17, NMS-free) → ONNX Runtime(+MLSDK C API), CPU EP + XNNPACK.** CPU 추론 →
-RDNA2 iGPU는 120Hz AR 렌더링에 양보(ML2는 AMD라 TensorRT/CUDA 불가).
+데이터셋 ~77% 소형 → 소형 recall 향상 레버:
+- **imgsz 960 재학습:** `python scripts/train.py --imgsz 960 --name yolo26n_drone_960`
+- **P2 head**(stride-4 세밀 특징): `--model yolo26-p2.yaml` (from scratch) 후 재 export
+- 정확도 여유 필요 시 **yolo26s**
 
-**출력 텐서** `(1,300,6)` = `[x1,y1,x2,y2,score,class]` (one-to-one head) → 디바이스 **NMS 불필요**,
-`score` 임계값만 적용. 좌표는 640×640 letterbox 입력 기준 → letterbox 역산(패딩 빼고 스케일 나눔)으로
-카메라 프레임 매핑.
-
-**On-device 앱 파이프라인:**
-1. ML2 카메라 프레임 획득 (MLSDK 카메라/perception API).
-2. 전처리: **640×640 letterbox, BGR→RGB, `/255`, HWC→CHW, float32** (INT8도 동일 float 입력 —
-   Q/DQ 내부 처리). *(스크립트는 종횡비 보존 letterbox; 단순 resize-640은 작은 드론 왜곡.)*
-3. CPU EP(XNNPACK) ORT `Run`. 렌더링/perception 코어 확보 위해 `intra_op_num_threads ≈ 3`.
-4. 300행 각각 `score ≥ 임계값` 유지(초기 ~0.25, on-device 튜닝).
-5. letterbox 역산 → 박스를 원본 카메라 해상도로 스케일.
-6. 박스 위치 AR 오버레이 렌더(월드 앵커 quad / HUD 마커).
-
-**작은 드론 미검출 시** (데이터셋 ~77% 소형): **`imgsz=960`** 재학습
-(`python scripts/train.py --imgsz 960 --name yolo26n_drone_960`) 또는 stride-4 세밀 특징용
-**P2 head** 추가(`--model yolo26-p2.yaml`, from scratch) 후 큰 해상도 재 export. 여유 시 yolo26s.
-
-**한계:** 지연 수치는 x86-64 데스크톱 CPU 측정 → ML2 Zen2 **방향성 추정치**, 실측 아님. 실제
-지연/정확도는 ML2 ADB 프로파일링 필요. INT8은 크기·단일 스레드 지연 유리, 멀티 스레드 이득은
-디바이스 XNNPACK 커널 의존.
-
-**선택적 대안 (현재 미생성):** TFLite INT8 (`format='tflite', int8=True`) — ML2 TFLite+NNAPI/XNNPACK
-경로용. **시도 실패**: `onnx2tf` 1.28.8이 YOLO26 NMS-free head `Tile` 변환 불가(`model.23/Tile`
-rank 불일치 → `Shape must be rank 3 but is rank 1`). ultralytics export·onnx2tf 직접 모두 동일 한계
-(Python 3.13 + 최신 YOLO26). ML2 1순위 경로는 ONNX라 영향 없음. 필요 시 onnx2tf 버전 변경 또는
-`param_replacement.json` 수동 보정. (TFLite 툴체인은 기존 `.venv` 보호 위해 별도 `.venv_tflite` 격리.)
+> 모델 추론·앱 구현·디바이스 배포는 본 리포 범위 밖이다. 협업자에게 **가중치·ONNX 산출물**
+> (`weights/`)을 전달한다.
 
 ---
 
