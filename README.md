@@ -18,18 +18,18 @@
 
 ## 성능 지표 (모델 선택 기준)
 
-### 정확도 (150 epochs, imgsz 640) — `weights/metrics.json`
+### 정확도 (150 epochs) — `weights/metrics.json` (test 기준; val 지표는 json 참조)
 
-| 모델 | Split | mAP50 | mAP50-95 | Precision | Recall | 파라미터 | best.pt |
-|------|-------|------:|---------:|----------:|-------:|--------:|--------:|
-| **yolo26n** (메인) | val | 0.911 | 0.583 | 0.958 | 0.872 | 2.4M | 5.4 MB |
-| yolo26n | test | **0.951** | 0.648 | 0.963 | 0.922 | | |
-| yolo26s (비교군) | val | 0.929 | 0.617 | 0.963 | 0.903 | 9.5M | 20.3 MB |
-| yolo26s | test | **0.958** | 0.681 | 0.968 | 0.945 | | |
+| 모델 | imgsz | test mAP50 | test mAP50-95 | Precision | Recall | 파라미터 | best.pt |
+|------|------:|----------:|-------------:|----------:|-------:|--------:|--------:|
+| yolo26n | 640 | 0.951 | 0.648 | 0.963 | 0.922 | 2.4M | 5.4 MB |
+| **yolo26n** | **960** | **0.968** | **0.699** | 0.976 | 0.936 | 2.4M | 5.5 MB |
+| yolo26s | 640 | 0.958 | 0.681 | 0.968 | 0.945 | 9.5M | 20.3 MB |
+| **yolo26s** | **960** | **0.970** | **0.723** | 0.981 | 0.956 | 9.5M | 20.4 MB |
 
-yolo26s: yolo26n 대비 test mAP50 +0.7%p / mAP50-95 +3%p, 단 파라미터·GFLOPs 약 4배(5.2→20.5).
-CPU 추론 타깃 → **yolo26n 권장**, 여유 시 yolo26s가 정확도 상한선. 예측 예시(작은 드론, conf 0.78):
-`docs/demo/`.
+- imgsz **960이 640 대비 test mAP50-95 +4~5%p** (소형 객체 ~77% → 해상도 효과 큼). 단 추론 비용 ↑(입력 2.25배).
+- 선택 가이드: 지연 우선 **yolo26n 640**, 정확도 우선 **960**. yolo26s는 정확도 상한선(파라미터 약 4배).
+- 예측 예시(작은 드론, conf 0.78): `docs/demo/`.
 
 ### Export 정밀도 — yolo26n, imgsz 640, NMS-free head, 출력 `[1,300,6]`
 
@@ -45,6 +45,10 @@ CPU 추론 타깃 → **yolo26n 권장**, 여유 시 yolo26s가 정확도 상한
 비교군 **yolo26s**도 동일 경로 export: FP32 38.2MB / FP16 19.2MB / INT8 10.2MB
 (`weights/yolo26s_drone_640_{fp32,fp16,int8}.onnx`).
 
+**imgsz 960 산출물** (입력 `[1,3,960,960]`, 가중치 동일이라 크기 거의 같음):
+yolo26n_960 FP32 10.0 / FP16 5.1 / INT8 **3.2** MB · yolo26s_960 FP32 38.4 / FP16 19.3 / INT8 10.5 MB
+(`weights/yolo26{n,s}_drone_960_{fp32,fp16,int8}.onnx`).
+
 ### Dev-CPU 지연 (방향성 추정치) — `weights/latency_report.md`
 
 > ⚠️ **x86-64 데스크톱 CPU**(i9-13900K) ORT / CPUExecutionProvider 측정. 모바일 CPU의 *방향성*
@@ -58,6 +62,7 @@ CPU 추론 타깃 → **yolo26n 권장**, 여유 시 yolo26s가 정확도 상한
 
 INT8: 크기·단일 스레드 지연 유리. 4 스레드는 Conv-only QDQ dequant 오버헤드로 x86 격차 축소.
 FP16: CPU 속도 이득 없음(ORT CPU에 native fp16 커널 없음) → 크기/이식성 옵션.
+표는 imgsz 640 yolo26n 기준. **960은 입력 2.25배라 지연 비례 증가 예상**(미측정).
 
 ---
 
@@ -83,7 +88,8 @@ INT8 모델도 입력은 float32다(Q/DQ는 그래프 내부 처리). 권장 con
 scripts/   voc2yolo.py  dataset_stats.py  train.py  train_all.sh
            eval.py  predict.py  export.py  bench_latency.py
 configs/   dut_drone.yaml
-weights/   yolo26{n,s}_drone_640.pt  yolo26n_drone_640_{fp32,fp16,int8}.onnx
+weights/   yolo26{n,s}_drone_{640,960}.pt
+           yolo26{n,s}_drone_{640,960}_{fp32,fp16,int8}.onnx
            metrics.json  latency_report.md
 docs/demo/ 예측 예시 이미지
 Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.md

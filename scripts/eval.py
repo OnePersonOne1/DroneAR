@@ -15,7 +15,8 @@ def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument("--weights", nargs="+", default=["weights/yolo26n_drone_640.pt"])
     ap.add_argument("--data", default="configs/dut_drone.yaml")
-    ap.add_argument("--imgsz", type=int, default=640)
+    ap.add_argument("--imgsz", type=int, default=0,
+                    help="0 = 모델명 끝 숫자에서 자동(yolo26n_drone_960 -> 960)")
     ap.add_argument("--device", default="0")
     ap.add_argument("--out", default="weights/metrics.json")
     return ap.parse_args()
@@ -31,14 +32,23 @@ def eval_split(weights, data, imgsz, device, split):
             "precision": round(float(b.mp), 4), "recall": round(float(b.mr), 4)}
 
 
+def resolve_imgsz(weights, override):
+    if override:
+        return override
+    import re
+    m = re.search(r"(\d+)$", Path(weights).stem)   # ..._960 -> 960
+    return int(m.group(1)) if m else 640
+
+
 def main():
     a = parse_args()
     out = {}
     for w in a.weights:
         stem = Path(w).stem
-        out[stem] = {"imgsz": a.imgsz}
+        imgsz = resolve_imgsz(w, a.imgsz)
+        out[stem] = {"imgsz": imgsz}
         for split in ("val", "test"):
-            out[stem][split] = eval_split(w, a.data, a.imgsz, a.device, split)
+            out[stem][split] = eval_split(w, a.data, imgsz, a.device, split)
             s = out[stem][split]
             print(f"{stem:24} {split:4}  mAP50={s['mAP50']:.4f}  "
                   f"mAP50-95={s['mAP50_95']:.4f}  P={s['precision']:.4f}  R={s['recall']:.4f}")
