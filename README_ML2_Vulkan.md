@@ -4,16 +4,16 @@ ML2 현재 추론은 ONNX Runtime **CPU**(XNNPACK) 경로이며 약 **7 FPS**다
 **ncnn-Vulkan** 으로 활용하는 GPU 추론 경로를 정리한다. 대상 모델은 `yolo26n_drone_640`,
 정밀도 FP16.
 
-> **검증 범위 주의.** ML2 실기가 없어 on-device 측정은 하지 않았다. 추론 코드 정확성과 Vulkan
+> **검증 범위 주의.** ML2 기기가 없어 on-device 측정은 하지 않았다. 추론 코드 정확성과 Vulkan
 > backend 동작·latency 는 **호스트 RTX 4090(Vulkan)** 으로 검증했다(RDNA2 와 동일 ncnn Vulkan
-> backend). ML2 고유 미지수(RDNA2 실측 성능, AOSP 의 Vulkan compute queue 노출)만 on-device 항목으로
+> backend). ML2의 RDNA2 실측 성능만 on-device 남은 과제 항목으로
 >남는다 → [docs/ML2_ONDEVICE_RUNBOOK.md](docs/ML2_ONDEVICE_RUNBOOK.md).
 
 ## 왜 ncnn-Vulkan 인가
 
 - ML2 = AMD RDNA2 → **NVIDIA 아님**. TensorRT/CUDA, DirectML(Windows), ROCm(데이터센터/Linux) 모두 부적합.
 - ORT NNAPI EP 는 AMD GPU용 NNAPI HAL 없으면 CPU 폴백.
-- **ncnn-Vulkan = 벤더 무관 Vulkan compute** → AMD 포함 동작. RDNA2 에 가장 현실적인 GPU 경로다.
+- **ncnn-Vulkan = 벤더 무관 Vulkan compute** → AMD 포함 동작. RDNA2 에 가장 현실적인 GPU 경로.
 
 ## 변환 — `.pt → ncnn`
 
@@ -55,7 +55,7 @@ cmake --build . -j && ./dronedet_selftest ../../demo
 ```
 
 결과(호스트 **RTX 4090 Vulkan**, ML2 아님):
-- Vulkan device 열거 + `use_vulkan=1` 동작.
+- Vulkan device + `use_vulkan=1` 동작.
 - parity `RESULT: PASS` (matched 5/5, meanIoU ≈ 0.982, mean|Δscore| ≈ 0.025).
 - forward latency ≈ **4.4 ± 0.9 ms (≈ 226 FPS)**, imgsz=640 batch=1 warmup=30 iters=200.
 - ⚠️ 위 수치는 **호스트 4090** 검증용이며 **ML2 RDNA2 수치가 아니다.**
@@ -72,7 +72,7 @@ cmake --build . -j            # -> libdronedet.so (ELF x86-64), dronedet_selftes
 ```
 
 - ncnn ML2 빌드는 **AVX-512 OFF**(ML2 Zen2 미지원, NDK clang ICE 회피) + Vulkan ON.
-- on-device 실행/측정은 [runbook](docs/ML2_ONDEVICE_RUNBOOK.md) 참조. **이 리포 작업에서 미실행.**
+- on-device 실행/측정은 [runbook](docs/ML2_ONDEVICE_RUNBOOK.md) 참조.
 
 ## 앱 연동
 
