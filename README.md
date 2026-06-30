@@ -14,6 +14,9 @@
 
 > 상태: 전체 파이프라인 완료 (데이터 → 학습 → 평가 → ML2 export → 벤치 → Docker 검증).
 
+> GPU 경로 탐색: RDNA2 iGPU 추론용 **ncnn-Vulkan** 경로 검증은
+> [README_ML2_Vulkan.md](README_ML2_Vulkan.md) 참조 (호스트 4090 Vulkan 검증, ML2 on-device 미검증).
+
 ---
 
 ## 성능 지표 (모델 선택 기준)
