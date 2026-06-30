@@ -14,6 +14,9 @@ deployment. A reproducible end-to-end pipeline.
 
 > Status: full pipeline complete (data → train → eval → ML2 export → bench → Docker verify).
 
+> GPU path exploration: an **ncnn-Vulkan** route for RDNA2 iGPU inference is documented in
+> [README_ML2_Vulkan.md](README_ML2_Vulkan.md) (verified on host RTX 4090 Vulkan; ML2 on-device not verified).
+
 ---
 
 ## Performance (model-selection reference)

@@ -24,6 +24,10 @@ runs/
 /yolo26s.pt
 /yolo26*.pt
 
+# C++ ncnn build dirs (host/cross). ncnn source tree & Android NDK live OUTSIDE the repo.
+cpp/build/
+cpp/build-ml2/
+
 # OS / editor / tooling
 .DS_Store
 .claude/
