@@ -9,6 +9,21 @@ ML2 현재 추론은 ONNX Runtime **CPU**(XNNPACK) 경로이며 약 **7 FPS**다
 > backend). ML2의 RDNA2 실측 성능만 on-device 남은 과제 항목으로
 >남는다 → [docs/ML2_ONDEVICE_RUNBOOK.md](docs/ML2_ONDEVICE_RUNBOOK.md).
 
+## 병합 데이터셋 모델 (merged-100ep)
+
+DUT+Maciullo 병합 가중치 `yolo26n_drone_640_mergedataset_100epoch.pt` 도 **동일 파이프라인**으로 배포된다(아키텍처 동일 → C++/cpp 모듈 변경 불필요, 모델 경로만 교체).
+
+- 변환: `weights/yolo26n_drone_640_mergedataset_100epoch_ncnn_model/` (FP16).
+- Parity(ncnn CPU vs ORT FP32): **PASS** — `weights/parity_ncnn_mergedataset_100epoch.md`.
+- C++ Vulkan host self-test(4090): **PASS** (matched 3/3, meanIoU 0.972, mean|Δscore| 0.056).
+- 효과: 지면·근접(Maciullo) 도메인 탐지 대폭 향상, DUT 공중 소형은 소폭 trade-off → `reports/old_vs_new.md`.
+
+```bash
+./dronedet_selftest ../../demo \
+  ../../weights/yolo26n_drone_640_mergedataset_100epoch_ncnn_model \
+  ../../weights/parity_ref_mergedataset_100epoch.csv
+```
+
 ## 왜 ncnn-Vulkan 인가
 
 - ML2 = AMD RDNA2 → **NVIDIA 아님**. TensorRT/CUDA, DirectML(Windows), ROCm(데이터센터/Linux) 모두 부적합.
