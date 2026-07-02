@@ -1,0 +1,37 @@
+{
+  "train": {
+    "dut": [
+      5200,
+      5243,
+      3
+    ],
+    "maciullo": [
+      51446,
+      52676,
+      1
+    ],
+    "total_images": 56646,
+    "total_boxes": 57919,
+    "negatives": 4
+  },
+  "val": {
+    "dut": [
+      2600,
+      2620,
+      0
+    ],
+    "total_images": 2600,
+    "total_boxes": 2620,
+    "negatives": 0
+  },
+  "test_dut": {
+    "images": 2200,
+    "boxes": 2245,
+    "negatives": 0
+  },
+  "test_maciullo": {
+    "images": 2625,
+    "boxes": 2863,
+    "negatives": 0
+  }
+}

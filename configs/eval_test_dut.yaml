@@ -1,0 +1,8 @@
+# Held-out eval set 'test_dut'. val: points to it so `--split val` evaluates it.
+path: /mnt/ssd_0/dataset/merged_drone
+train: images/train
+val: images/test_dut
+test: images/test_dut
+
+names:
+  0: drone

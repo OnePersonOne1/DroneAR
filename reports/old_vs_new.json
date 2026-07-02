@@ -1,0 +1,94 @@
+{
+  "old_DUT_only": {
+    "DUT-test": {
+      "metrics": {
+        "mAP50": 0.9509,
+        "mAP50_95": 0.6481,
+        "precision": 0.9629,
+        "recall": 0.9216
+      },
+      "failure_modes": {
+        "images": 2200,
+        "TP": 2095,
+        "FP": 138,
+        "FP_per_image": 0.0627,
+        "GT_empty_images": 0,
+        "FP_on_empty_images": 0,
+        "recall_small_<32.0px": 0.9319,
+        "n_small": 1380,
+        "recall_medium": 0.9387,
+        "n_medium": 506,
+        "recall_large_>96.0px": 0.9304,
+        "n_large": 359
+      }
+    },
+    "Maciullo-test": {
+      "metrics": {
+        "mAP50": 0.6013,
+        "mAP50_95": 0.2164,
+        "precision": 0.7764,
+        "recall": 0.5688
+      },
+      "failure_modes": {
+        "images": 2625,
+        "TP": 1619,
+        "FP": 559,
+        "FP_per_image": 0.213,
+        "GT_empty_images": 0,
+        "FP_on_empty_images": 0,
+        "recall_small_<32.0px": 0.6169,
+        "n_small": 877,
+        "recall_medium": 0.6418,
+        "n_medium": 1100,
+        "recall_large_>96.0px": 0.4199,
+        "n_large": 886
+      }
+    }
+  },
+  "new_merged": {
+    "DUT-test": {
+      "metrics": {
+        "mAP50": 0.9269,
+        "mAP50_95": 0.6194,
+        "precision": 0.9527,
+        "recall": 0.87
+      },
+      "failure_modes": {
+        "images": 2200,
+        "TP": 1979,
+        "FP": 139,
+        "FP_per_image": 0.0632,
+        "GT_empty_images": 0,
+        "FP_on_empty_images": 0,
+        "recall_small_<32.0px": 0.842,
+        "n_small": 1380,
+        "recall_medium": 0.9328,
+        "n_medium": 506,
+        "recall_large_>96.0px": 0.961,
+        "n_large": 359
+      }
+    },
+    "Maciullo-test": {
+      "metrics": {
+        "mAP50": 0.8909,
+        "mAP50_95": 0.445,
+        "precision": 0.9241,
+        "recall": 0.8358
+      },
+      "failure_modes": {
+        "images": 2625,
+        "TP": 2385,
+        "FP": 122,
+        "FP_per_image": 0.0465,
+        "GT_empty_images": 0,
+        "FP_on_empty_images": 0,
+        "recall_small_<32.0px": 0.829,
+        "n_small": 877,
+        "recall_medium": 0.7655,
+        "n_medium": 1100,
+        "recall_large_>96.0px": 0.921,
+        "n_large": 886
+      }
+    }
+  }
+}

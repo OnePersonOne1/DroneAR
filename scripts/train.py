@@ -33,6 +33,8 @@ def parse_args():
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--project", default="runs")
     ap.add_argument("--name", default="yolo26n_drone_640")
+    ap.add_argument("--seed", type=int, default=0,
+                    help="reproducibility seed (ultralytics default is already 0)")
     return ap.parse_args()
 
 
@@ -60,6 +62,7 @@ def main():
         workers=a.workers,
         project=project,
         name=a.name,
+        seed=a.seed,
         plots=True,
     )
     # Best checkpoint location for downstream phases.
