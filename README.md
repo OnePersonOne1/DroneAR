@@ -2,8 +2,8 @@
 
 > 🌐 English version: [README_English.md](README_English.md)
 
-**DUT-Anti-UAV**로 **YOLO26** 드론(UAV) 탐지 모델 학습 → **Magic Leap 2(ML2)** 배포용 export.
-재현 가능한 end-to-end 파이프라인이다.
+**DUT-Anti-UAV**(+ 지면-배경 보완용 **Maciullo DroneDetectionDataset** 병합)로 **YOLO26** 드론(UAV)
+탐지 모델 학습 → **Magic Leap 2(ML2)** 배포용 export. 재현 가능한 end-to-end 파이프라인이다.
 
 - **학습 환경:** RTX 4090 24GB / Linux / CUDA (학습 전용)
 - **추론 타깃:** ML2 — AMD "Mero" SoC (Zen2 쿼드코어 x86-64 CPU + RDNA2 iGPU), 16GB,
@@ -142,6 +142,12 @@ Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.
 
 ## 데이터셋
 
+**출처 (Sources)**
+- **DUT-Anti-UAV** (기본 · 공중 배경): <https://github.com/wangdongdut/DUT-Anti-UAV>
+- **Maciullo DroneDetectionDataset** (병합 · 지면·근접): 원본 <https://github.com/Maciullo/DroneDetectionDataset> · 사용한 HF mirror <https://huggingface.co/datasets/pathikg/drone-detection-dataset>
+
+### DUT-Anti-UAV
+
 DUT-Anti-UAV는 수동 준비. 아래 PASCAL VOC 구조로 `/mnt/ssd_0/dataset/DUT`에 배치/압축해제한다.
 변환 스크립트는 이 트리를 **수정하지 않는다**(read-only).
 
@@ -178,6 +184,22 @@ python scripts/dataset_stats.py   # 박스 크기 히스토그램 + 샘플 박�
 | tiny (<13px, 정규화변 <0.02) | 40.6% |
 
 → 드론 대부분 소형. 기본 `imgsz=640`(ML2 타깃) 유지. 소형 recall 향상 수단은 **imgsz=960·P2 head**.
+
+### Maciullo DroneDetectionDataset — 지면-배경 병합
+
+공중 위주 DUT의 **지면·근접 드론** 취약점 보완용. HF mirror(`pathikg/drone-detection-dataset`)로 취득 → `/mnt/ssd_0/dataset/DroneDetection`에 materialize.
+
+- 규모: train **51,446** / test **2,625** (HF mirror 값 — 공식 test 5,375과 다름). 전부 640×480, COCO xywh, 단일 class(`drone`).
+- 578개 영상 파생이나 **HF mirror에 video_id 없음** → sequence provenance 복원 불가. **leakage-safe fallback**: Maciullo train 전량 → merged train, val은 **DUT 공식 val만**, 원본 test 2개(DUT-test·Maciullo-test)는 별도 eval로 보존.
+- 병합 결과 `/mnt/ssd_0/dataset/merged_drone`: train **56,646**(DUT 5,200 + Maciullo 51,446) / val 2,600 / test_dut 2,200 · test_maciullo 2,625.
+- 파이프라인: `scripts/fetch_maciullo.py`(취득·감사) → `scripts/merge_datasets.py`(YOLO 통일·leakage-safe 병합) → `scripts/analyze_merge.py`(스케일·배경 비교). 감사·비교·split 매핑은 `reports/`, old vs new 효과는 `reports/old_vs_new.md`.
+- 효과 요약: 지면·근접(Maciullo) 도메인 mAP50 0.601→0.891·FP/img −78%, DUT 공중 초소형은 소폭 trade-off.
+
+```bash
+.venv/bin/python scripts/fetch_maciullo.py      # HF → images + COCO 어노테이션 + AUDIT.md
+.venv/bin/python scripts/merge_datasets.py      # merged_drone + configs/merged_drone.yaml
+.venv/bin/python scripts/analyze_merge.py       # reports/dataset_comparison.md
+```
 
 ---
 
@@ -271,4 +293,4 @@ python scripts/train.py
 
 ## 라이선스 / 비고
 
-데이터셋(DUT-Anti-UAV)은 자체 라이선스를 따른다. 여기서 재배포하지 않는다.
+데이터셋(**DUT-Anti-UAV**, **Maciullo DroneDetectionDataset**)은 각자 원 라이선스를 따른다. 여기서 재배포하지 않는다(위 출처 링크 참조).

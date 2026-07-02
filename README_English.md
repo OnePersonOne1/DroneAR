@@ -2,8 +2,9 @@
 
 > 🌐 한국어 버전: [README.md](README.md)
 
-Train a **YOLO26** drone (UAV) detector on **DUT-Anti-UAV** → export for **Magic Leap 2 (ML2)**
-deployment. A reproducible end-to-end pipeline.
+Train a **YOLO26** drone (UAV) detector on **DUT-Anti-UAV** (+ **Maciullo DroneDetectionDataset**
+merged for ground-background coverage) → export for **Magic Leap 2 (ML2)** deployment.
+A reproducible end-to-end pipeline.
 
 - **Train host:** RTX 4090 24GB / Linux / CUDA (training only)
 - **Inference target:** ML2 — AMD "Mero" SoC (Zen2 quad-core x86-64 CPU + RDNA2 iGPU), 16GB,
@@ -144,6 +145,12 @@ Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.
 
 ## Dataset
 
+**Sources**
+- **DUT-Anti-UAV** (base · aerial backgrounds): <https://github.com/wangdongdut/DUT-Anti-UAV>
+- **Maciullo DroneDetectionDataset** (merged · ground / near-field): original <https://github.com/Maciullo/DroneDetectionDataset> · HF mirror used <https://huggingface.co/datasets/pathikg/drone-detection-dataset>
+
+### DUT-Anti-UAV
+
 DUT-Anti-UAV is prepared manually. Place/extract it at `/mnt/ssd_0/dataset/DUT` in the PASCAL VOC
 layout below. The converter does **not** modify this tree (read-only).
 
@@ -180,6 +187,29 @@ normalized side `sqrt(w·h)`: median **0.0226** (~14.5px @640), p25 0.0163, p75 
 | tiny (<13px, norm side <0.02) | 40.6% |
 
 → Most drones are small. Baseline stays `imgsz=640`; the small-object recall levers are **imgsz=960 · P2 head**.
+
+### Maciullo DroneDetectionDataset — ground-background merge
+
+Merged to fix DUT's weakness on **ground / near-field drones**. Acquired via the HF mirror
+(`pathikg/drone-detection-dataset`) and materialized to `/mnt/ssd_0/dataset/DroneDetection`.
+
+- Size: train **51,446** / test **2,625** (HF-mirror counts — differs from the official test 5,375).
+  All 640×480, COCO xywh, single class (`drone`).
+- Derived from 578 videos, but **the HF mirror has no video_id** → sequence provenance is
+  unrecoverable. **Leakage-safe fallback**: all Maciullo-train → merged train; val is **DUT's
+  official val only**; both original test sets (DUT-test, Maciullo-test) kept as separate eval sets.
+- Merged `/mnt/ssd_0/dataset/merged_drone`: train **56,646** (DUT 5,200 + Maciullo 51,446) /
+  val 2,600 / test_dut 2,200 · test_maciullo 2,625.
+- Pipeline: `scripts/fetch_maciullo.py` (acquire+audit) → `scripts/merge_datasets.py`
+  (YOLO unify + leakage-safe merge) → `scripts/analyze_merge.py` (scale/background compare).
+  Audit/comparison/split-mapping under `reports/`; old-vs-new impact in `reports/old_vs_new.md`.
+- Impact: ground/near-field (Maciullo) mAP50 0.601→0.891 · FP/img −78%; small aerial (DUT) a mild trade-off.
+
+```bash
+.venv/bin/python scripts/fetch_maciullo.py      # HF → images + COCO ann + AUDIT.md
+.venv/bin/python scripts/merge_datasets.py      # merged_drone + configs/merged_drone.yaml
+.venv/bin/python scripts/analyze_merge.py       # reports/dataset_comparison.md
+```
 
 ---
 
@@ -276,4 +306,4 @@ Dataset ~77% small → small-object recall levers:
 
 ## License / notes
 
-The DUT-Anti-UAV dataset keeps its own license; not redistributed here.
+The datasets (**DUT-Anti-UAV**, **Maciullo DroneDetectionDataset**) each keep their own license; not redistributed here (see source links above).
