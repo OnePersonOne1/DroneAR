@@ -150,7 +150,7 @@ configs/   dut_drone.yaml
 weights/   yolo26{n,s}_drone_{640,960}.pt
            yolo26{n,s}_drone_{640,960}_{fp32,fp16,int8}.onnx
            metrics.json  latency_report.md(CPU)  latency_gpu.md(GPU)
-demo/      추론 예시 이미지 (image0~9; README엔 0/2/4)
+demo/      추론 예시 이미지 (공중 image0~9 + 지면 ground0~3; README엔 0/8/ground1)
 Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.md
 ```
 
