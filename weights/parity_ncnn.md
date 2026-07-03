@@ -1,24 +1,28 @@
 # ncnn(CPU) vs ONNX Runtime(FP32) parity — yolo26n_drone_640
 
-- demo 10장, imgsz=640, conf=0.25
+- demo 14장, imgsz=640, conf=0.25
 - ncnn: FP16 export, `use_vulkan_compute=false`(CPU). one-to-many head + IoU 0.7 NMS.
 - 비교 공간: 640 letterbox 입력 좌표(동일 전처리).
 
 | 이미지 | ORT det | ncnn det | matched(IoU≥0.5) | mean\|Δscore\| | mean IoU |
 |---|---:|---:|---:|---:|---:|
+| ground0.jpg | 0 | 0 | 0 | nan | nan |
+| ground1.jpg | 1 | 1 | 1 | 0.0839 | 0.9861 |
+| ground2.jpg | 3 | 3 | 3 | 0.0800 | 0.9218 |
+| ground3.jpg | 0 | 0 | 0 | nan | nan |
 | image0.jpg | 0 | 0 | 0 | nan | nan |
-| image1.jpg | 0 | 0 | 0 | nan | nan |
-| image2.jpg | 0 | 1 | 0 | nan | nan |
+| image1.jpg | 1 | 1 | 1 | 0.1606 | 0.9764 |
+| image2.jpg | 1 | 1 | 1 | 0.2165 | 0.9684 |
 | image3.jpg | 0 | 0 | 0 | nan | nan |
 | image4.jpg | 0 | 0 | 0 | nan | nan |
-| image5.jpg | 1 | 1 | 1 | 0.0016 | 0.9893 |
-| image6.jpg | 1 | 1 | 1 | 0.0260 | 0.9765 |
-| image7.jpg | 1 | 1 | 1 | 0.0264 | 0.9696 |
-| image8.jpg | 1 | 1 | 1 | 0.0371 | 0.9913 |
-| image9.jpg | 1 | 1 | 1 | 0.0210 | 0.9858 |
+| image5.jpg | 1 | 1 | 1 | 0.0144 | 0.9763 |
+| image6.jpg | 1 | 1 | 1 | 0.0208 | 0.9902 |
+| image7.jpg | 1 | 1 | 1 | 0.0309 | 0.9654 |
+| image8.jpg | 1 | 1 | 1 | 0.0320 | 0.9677 |
+| image9.jpg | 1 | 1 | 1 | 0.2145 | 0.9883 |
 
-**합계**: ORT 5 · ncnn 6 · matched 5
-**평균 |Δscore|** 0.0224 · **평균 IoU** 0.9825
+**합계**: ORT 11 · ncnn 11 · matched 11
+**평균 |Δscore|** 0.0948 · **평균 IoU** 0.9712
 
 **게이트(det ±1, IoU≥0.95, |Δscore|≤0.1): PASS ✅**
 

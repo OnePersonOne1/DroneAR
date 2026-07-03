@@ -101,13 +101,14 @@ imgsz 960 (input `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ## Demo (inference examples)
 
-test set inference — `yolo26n_640` (main deploy model), imgsz 640, conf 0.25. (`demo/` holds image0~9)
+test set inference — `yolo26n` **merged-300ep** (recommended deploy model), imgsz 640, conf 0.25.
+(`demo/`: aerial DUT-test `image0~9` + ground Maciullo-test `ground0~3`)
 
-| image0 | image2 | image4 |
+| image0 (aerial) | image4 (aerial) | ground1 (ground) |
 |:---:|:---:|:---:|
-| ![image0](demo/image0.jpg) | ![image2](demo/image2.jpg) | ![image4](demo/image4.jpg) |
+| ![image0](demo/image0.jpg) | ![image4](demo/image4.jpg) | ![ground1](demo/ground1.jpg) |
 
-Reproduce: `python scripts/predict.py --weights weights/yolo26n_drone_640.pt --imgsz 640 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
+Reproduce: `python scripts/predict.py --weights weights/yolo26n_drone_640_mergedataset_300epoch.pt --imgsz 640 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
 
 ---
 

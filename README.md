@@ -48,8 +48,9 @@
 | merged-100ep | Maciullo-test | **0.891** | **0.445** | 0.924 | **0.836** | **0.047** | **0.829** |
 | **merged-300ep** | Maciullo-test | 0.858 | 0.415 | 0.916 | 0.822 | 0.067 | 0.798 |
 
-- 300ep: DUT 회복(≈old 동급, FP/img 최저) + Maciullo 대폭 개선 유지 → **균형 최적**.
-- 100ep: Maciullo 최고, DUT 소폭 희생 → 지면 특화. 상세: [reports/old_vs_new.md](reports/old_vs_new.md).
+- 300ep: 전 도메인 무회귀(DUT ≈ old, FP/img 최저) → 범용 권장.
+- 100ep: 이미지-가중 평균 mAP 최고(지면 셋 우세) → 지면·근접 위주 배포 시 선택.
+- 둘은 Pareto 관계 — 최적은 배포 도메인 prior 로 결정. 상세: [reports/old_vs_new.md](reports/old_vs_new.md).
 
 ### 추론 속도 — GPU (RTX 4090)
 
@@ -113,13 +114,14 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ## Demo (추론 예시)
 
-test set 추론 결과 — `yolo26n_640`(메인 배포 모델), imgsz 640, conf 0.25. (`demo/`에 image0~9 전체)
+test set 추론 결과 — `yolo26n` **merged-300ep**(권장 배포 모델), imgsz 640, conf 0.25.
+(`demo/`: 공중 DUT-test `image0~9` + 지면 Maciullo-test `ground0~3`)
 
-| image0 | image2 | image8 |
+| image0 (공중) | image8 (공중) | ground1 (지면) |
 |:---:|:---:|:---:|
-| ![image0](demo/image0.jpg) | ![image2](demo/image2.jpg) | ![image8](demo/image8.jpg) |
+| ![image0](demo/image0.jpg) | ![image8](demo/image8.jpg) | ![ground1](demo/ground1.jpg) |
 
-재현: `python scripts/predict.py --weights weights/yolo26n_drone_640.pt --imgsz 640 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
+재현: `python scripts/predict.py --weights weights/yolo26n_drone_640_mergedataset_300epoch.pt --imgsz 640 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
 
 ---
 
