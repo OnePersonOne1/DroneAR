@@ -37,6 +37,20 @@
 - 선택 가이드: 지연 우선 **yolo26n 640**, 정확도 우선 **960**. yolo26s는 정확도 상한선(파라미터 약 4배).
 - 추론 예시: 아래 [Demo](#demo-추론-예시) 섹션.
 
+### 병합 데이터셋 효과 — old vs merged (고정 held-out test, yolo26n 640)
+
+| 모델 | test set | mAP@0.5 | mAP@0.5:0.95 | P | R | FP/img | small-recall(<32px) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| old (DUT-only, 150ep) | DUT-test | 0.951 | 0.648 | 0.963 | 0.922 | 0.063 | 0.932 |
+| merged-100ep | DUT-test | 0.927 | 0.619 | 0.953 | 0.870 | 0.063 | 0.842 |
+| **merged-300ep** | DUT-test | 0.950 | **0.650** | **0.971** | 0.922 | **0.041** | 0.889 |
+| old (DUT-only, 150ep) | Maciullo-test | 0.601 | 0.216 | 0.776 | 0.569 | 0.213 | 0.617 |
+| merged-100ep | Maciullo-test | **0.891** | **0.445** | 0.924 | **0.836** | **0.047** | **0.829** |
+| **merged-300ep** | Maciullo-test | 0.858 | 0.415 | 0.916 | 0.822 | 0.067 | 0.798 |
+
+- 300ep: DUT 회복(≈old 동급, FP/img 최저) + Maciullo 대폭 개선 유지 → **균형 최적**.
+- 100ep: Maciullo 최고, DUT 소폭 희생 → 지면 특화. 상세: [reports/old_vs_new.md](reports/old_vs_new.md).
+
 ### 추론 속도 — GPU (RTX 4090)
 
 config: imgsz=640, batch=1(single-stream), warmup=30, iters=200, **순수 forward(전·후처리·NMS 제외)**,

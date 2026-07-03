@@ -48,45 +48,45 @@
   "new_merged": {
     "DUT-test": {
       "metrics": {
-        "mAP50": 0.9269,
-        "mAP50_95": 0.6194,
-        "precision": 0.9527,
-        "recall": 0.87
+        "mAP50": 0.9497,
+        "mAP50_95": 0.6495,
+        "precision": 0.9712,
+        "recall": 0.922
       },
       "failure_modes": {
         "images": 2200,
-        "TP": 1979,
-        "FP": 139,
-        "FP_per_image": 0.0632,
+        "TP": 2066,
+        "FP": 89,
+        "FP_per_image": 0.0405,
         "GT_empty_images": 0,
         "FP_on_empty_images": 0,
-        "recall_small_<32.0px": 0.842,
+        "recall_small_<32.0px": 0.8891,
         "n_small": 1380,
-        "recall_medium": 0.9328,
+        "recall_medium": 0.9644,
         "n_medium": 506,
-        "recall_large_>96.0px": 0.961,
+        "recall_large_>96.0px": 0.9777,
         "n_large": 359
       }
     },
     "Maciullo-test": {
       "metrics": {
-        "mAP50": 0.8909,
-        "mAP50_95": 0.445,
-        "precision": 0.9241,
-        "recall": 0.8358
+        "mAP50": 0.8583,
+        "mAP50_95": 0.4146,
+        "precision": 0.916,
+        "recall": 0.8224
       },
       "failure_modes": {
         "images": 2625,
-        "TP": 2385,
-        "FP": 122,
-        "FP_per_image": 0.0465,
+        "TP": 2313,
+        "FP": 175,
+        "FP_per_image": 0.0667,
         "GT_empty_images": 0,
         "FP_on_empty_images": 0,
-        "recall_small_<32.0px": 0.829,
+        "recall_small_<32.0px": 0.7982,
         "n_small": 877,
-        "recall_medium": 0.7655,
+        "recall_medium": 0.73,
         "n_medium": 1100,
-        "recall_large_>96.0px": 0.921,
+        "recall_large_>96.0px": 0.9142,
         "n_large": 886
       }
     }
