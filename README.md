@@ -115,7 +115,7 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 test set 추론 결과 — `yolo26n_640`(메인 배포 모델), imgsz 640, conf 0.25. (`demo/`에 image0~9 전체)
 
-| image0 | image2 | image4 |
+| image0 | image2 | image8 |
 |:---:|:---:|:---:|
 | ![image0](demo/image0.jpg) | ![image2](demo/image2.jpg) | ![image4](demo/image4.jpg) |
 
