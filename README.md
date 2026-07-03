@@ -117,7 +117,7 @@ test set 추론 결과 — `yolo26n_640`(메인 배포 모델), imgsz 640, conf 
 
 | image0 | image2 | image8 |
 |:---:|:---:|:---:|
-| ![image0](demo/image0.jpg) | ![image2](demo/image2.jpg) | ![image4](demo/image4.jpg) |
+| ![image0](demo/image0.jpg) | ![image2](demo/image2.jpg) | ![image8](demo/image8.jpg) |
 
 재현: `python scripts/predict.py --weights weights/yolo26n_drone_640.pt --imgsz 640 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
 
