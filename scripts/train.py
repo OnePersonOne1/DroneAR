@@ -35,6 +35,8 @@ def parse_args():
     ap.add_argument("--name", default="yolo26n_drone_640")
     ap.add_argument("--seed", type=int, default=0,
                     help="reproducibility seed (ultralytics default is already 0)")
+    ap.add_argument("--pretrained", default=None,
+                    help="yaml 모델(예: yolo26n-p2.yaml)에서 가중치 전이할 .pt 경로")
     return ap.parse_args()
 
 
@@ -63,6 +65,7 @@ def main():
         project=project,
         name=a.name,
         seed=a.seed,
+        pretrained=a.pretrained if a.pretrained else True,
         plots=True,
     )
     # Best checkpoint location for downstream phases.

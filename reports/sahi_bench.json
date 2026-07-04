@@ -1,0 +1,81 @@
+{
+  "weights": "weights/yolo26n_drone_640_mergedataset_300epoch.pt",
+  "images": 2200,
+  "modes": {
+    "base640": {
+      "recall_by_bin": [
+        0.8162,
+        0.8854,
+        0.9088,
+        0.9433,
+        0.9567,
+        0.9728,
+        0.9858
+      ],
+      "gt_total": [
+        136,
+        829,
+        274,
+        141,
+        323,
+        331,
+        211
+      ],
+      "far_recall": 0.8756,
+      "far_gt": 965,
+      "overall_recall": 0.9203,
+      "FP_per_image": 0.0391,
+      "ms_per_image": 4.2
+    },
+    "hi1280": {
+      "recall_by_bin": [
+        0.9191,
+        0.9481,
+        0.9489,
+        0.9433,
+        0.9628,
+        0.9728,
+        0.9526
+      ],
+      "gt_total": [
+        136,
+        829,
+        274,
+        141,
+        323,
+        331,
+        211
+      ],
+      "far_recall": 0.944,
+      "far_gt": 965,
+      "overall_recall": 0.9523,
+      "FP_per_image": 0.1177,
+      "ms_per_image": 5.3
+    },
+    "tile640": {
+      "recall_by_bin": [
+        0.8824,
+        0.9397,
+        0.9562,
+        0.9645,
+        0.9783,
+        0.9819,
+        0.9763
+      ],
+      "gt_total": [
+        136,
+        829,
+        274,
+        141,
+        323,
+        331,
+        211
+      ],
+      "far_recall": 0.9316,
+      "far_gt": 965,
+      "overall_recall": 0.955,
+      "FP_per_image": 0.9514,
+      "ms_per_image": 16.1
+    }
+  }
+}
