@@ -53,6 +53,7 @@
 - **merged-P2-960** (imgsz 960 + P2 head): 전 도메인 최고/동급, far(<16px) recall 최고 — **클라우드(4090) 권장** (4.2ms/236FPS, ML2 온디바이스 아님). 상세: [reports/far_drone_p2_960.md](reports/far_drone_p2_960.md).
 - 300ep(640): 온디바이스(ML2) 권장 — 전 도메인 무회귀, FP/img 최저.
 - 100ep(640): 지면·근접 특화 시 선택. 상세: [reports/old_vs_new.md](reports/old_vs_new.md).
+- 케이스별 학습 곡선(epoch×mAP, DUT-val 공통): [reports/training_curves.png](reports/training_curves.png) — 해상도(960)가 최대 레버, 640은 300ep로도 960 미달.
 
 ### 추론 속도 — GPU (RTX 4090)
 
