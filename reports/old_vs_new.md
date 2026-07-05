@@ -1,7 +1,7 @@
 # Old (DUT-only) vs New (merged) — Phase 4
 
 ## 데이터셋 확장
-지면-드론(Maciullo) 데이터를 DUT(공중)에 leakage-safe 병합 → 공중뿐 아니라 지면과 겹치는 드론의 탐지 성능을 올렸다.
+Maciullo 데이터를 DUT에 leakage-safe 병합(학습 데이터 10×) → 신규 도메인(근접·중대형) 탐지 성능을 올렸다.
 
 ## 결과 (고정 held-out test) — 3-way
 
@@ -15,7 +15,7 @@
 | **merged-300ep** | Maciullo-test | 0.858 | 0.415 | 0.916 | 0.822 | 0.067 | 0.798 |
 
 - 300ep: 전 도메인 무회귀(DUT ≈ old, FP/img 최저) → 범용 권장.
-- 100ep: 이미지-가중 평균 mAP 최고(mAP50 0.907 vs 300ep 0.900) → 지면·근접 위주 배포 시 선택.
+- 100ep: 이미지-가중 평균 mAP 최고(mAP50 0.907 vs 300ep 0.900) → Maciullo 도메인 위주 배포 시 선택.
 - 둘은 Pareto 관계 — 최적은 배포 도메인 prior 로 결정.
 - best.pt 선택 기준이 DUT-val이라 장기 학습(300ep)이 DUT 쪽으로 재수렴.
 

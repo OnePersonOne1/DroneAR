@@ -18,7 +18,7 @@ DUT+Maciullo 병합 가중치도 **동일 파이프라인**으로 배포된다(�
 | `..._mergedataset_100epoch` | ✅ | PASS | PASS (matched 3/3, meanIoU 0.972) |
 | `..._mergedataset_300epoch` | ✅ | PASS | PASS (matched 5/5, meanIoU 0.983, 3.7±0.5 ms ≈ 269 FPS — 4090, ML2 아님) |
 
-- 권장: **300ep** (DUT ≈ 기존 동급 + 지면·근접 대폭 개선, 균형 최적) → `reports/old_vs_new.md`.
+- 권장: **300ep** (DUT ≈ 기존 동급 + Maciullo 도메인 대폭 개선, 균형 최적) → `reports/old_vs_new.md`.
 - parity 리포트: `weights/parity_ncnn_mergedataset_{100,300}epoch.md`.
 
 ```bash

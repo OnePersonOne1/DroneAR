@@ -2,7 +2,7 @@
 
 > 🌐 English version: [README_English.md](README_English.md)
 
-**DUT-Anti-UAV**(+ 지면-배경 보완용 **Maciullo DroneDetectionDataset** 병합)로 **YOLO26** 드론(UAV)
+**DUT-Anti-UAV**(+ **Maciullo DroneDetectionDataset** 병합, 학습 데이터 10×)로 **YOLO26** 드론(UAV)
 탐지 모델 학습 → **Magic Leap 2(ML2)** 배포용 export. 재현 가능한 end-to-end 파이프라인이다.
 
 - **학습 환경:** RTX 4090 24GB / Linux / CUDA (학습 전용)
@@ -52,7 +52,7 @@
 
 - **merged-P2-960** (imgsz 960 + P2 head): 전 도메인 최고/동급, far(<16px) recall 최고 — **클라우드(4090) 권장** (4.2ms/236FPS, ML2 온디바이스 아님). 상세: [reports/far_drone_p2_960.md](reports/far_drone_p2_960.md).
 - 300ep(640): 온디바이스(ML2) 권장 — 전 도메인 무회귀, FP/img 최저.
-- 100ep(640): 지면·근접 특화 시 선택. 상세: [reports/old_vs_new.md](reports/old_vs_new.md).
+- 100ep(640): Maciullo 도메인 특화 시 선택. 상세: [reports/old_vs_new.md](reports/old_vs_new.md).
 - 케이스별 학습 곡선(epoch×mAP, DUT-val 공통): [reports/training_curves.png](reports/training_curves.png) — 해상도(960)가 최대 레버, 640은 300ep로도 960 미달.
 
 ### 추론 속도 — GPU (RTX 4090)
@@ -130,8 +130,8 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ![training curves](reports/training_curves.png)
 
-- 곡선(검증셋 DUT-val 공통): **해상도(960) = 최대 레버**, 640은 300ep로도 960 미달. merged의 지면 이득은 이 곡선에 미반영.
-- 병합(A→C): 지면 +29pt·DUT far −10.5pt → epochs(C→D)·960+P2(C→E)로 회복, 추론 1280(E→F)은 무비용 far 이득.
+- 곡선(검증셋 DUT-val 공통): **해상도(960) = 최대 레버**, 640은 300ep로도 960 미달. merged의 Maciullo 도메인 이득은 이 곡선에 미반영.
+- 병합(A→C): Maciullo +29pt·DUT far −10.5pt → epochs(C→D)·960+P2(C→E)로 회복, 추론 1280(E→F)은 무비용 far 이득.
 - **P2 단독 기여는 미분리**(merged+960+P2無 미학습) — E의 이득은 960+P2 **결합**으로만 주장. 상세: [reports/ablation_matrix.md](reports/ablation_matrix.md).
 
 ---
@@ -139,9 +139,9 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 ## Demo (추론 예시)
 
 test set 추론 결과 — `yolo26n` **merged-300ep**(권장 배포 모델), imgsz 640, conf 0.25.
-(`demo/`: 공중 DUT-test `image0~9` + 지면 Maciullo-test `ground0~3`)
+(`demo/`: DUT-test `image0~9` + Maciullo-test `ground0~3`)
 
-| image0 (공중) | image8 (공중) | ground1 (지면) |
+| image0 (DUT) | image8 (DUT) | ground1 (Maciullo) |
 |:---:|:---:|:---:|
 | ![image0](demo/image0.jpg) | ![image8](demo/image8.jpg) | ![ground1](demo/ground1.jpg) |
 
@@ -174,7 +174,7 @@ configs/   dut_drone.yaml
 weights/   yolo26{n,s}_drone_{640,960}.pt
            yolo26{n,s}_drone_{640,960}_{fp32,fp16,int8}.onnx
            metrics.json  latency_report.md(CPU)  latency_gpu.md(GPU)
-demo/      추론 예시 이미지 (공중 image0~9 + 지면 ground0~3; README엔 0/8/ground1)
+demo/      추론 예시 이미지 (DUT image0~9 + Maciullo ground0~3; README엔 0/8/ground1)
 Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.md
 ```
 
@@ -183,8 +183,8 @@ Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.
 ## 데이터셋
 
 **출처 (Sources)**
-- **DUT-Anti-UAV** (기본 · 공중 배경): <https://github.com/wangdongdut/DUT-Anti-UAV>
-- **Maciullo DroneDetectionDataset** (병합 · 지면·근접): 원본 <https://github.com/Maciullo/DroneDetectionDataset> · 사용한 HF mirror <https://huggingface.co/datasets/pathikg/drone-detection-dataset>
+- **DUT-Anti-UAV** (기본): <https://github.com/wangdongdut/DUT-Anti-UAV>
+- **Maciullo DroneDetectionDataset** (병합 · 근접·중대형): 원본 <https://github.com/Maciullo/DroneDetectionDataset> · 사용한 HF mirror <https://huggingface.co/datasets/pathikg/drone-detection-dataset>
 
 ### DUT-Anti-UAV
 
@@ -225,15 +225,15 @@ python scripts/dataset_stats.py   # 박스 크기 히스토그램 + 샘플 박�
 
 → 드론 대부분 소형. 기본 `imgsz=640`(ML2 타깃) 유지. 소형 recall 향상 수단은 **imgsz=960·P2 head**.
 
-### Maciullo DroneDetectionDataset — 지면-배경 병합
+### Maciullo DroneDetectionDataset — 병합
 
-공중 위주 DUT의 **지면·근접 드론** 취약점 보완용. HF mirror(`pathikg/drone-detection-dataset`)로 취득 → `/mnt/ssd_0/dataset/DroneDetection`에 materialize.
+학습 데이터 확장용(10×, 근접·중대형 도메인 추가). HF mirror(`pathikg/drone-detection-dataset`)로 취득 → `/mnt/ssd_0/dataset/DroneDetection`에 materialize.
 
 - 규모: train **51,446** / test **2,625** (HF mirror 값 — 공식 test 5,375과 다름). 전부 640×480, COCO xywh, 단일 class(`drone`).
 - 578개 영상 파생이나 **HF mirror에 video_id 없음** → sequence provenance 복원 불가. **leakage-safe fallback**: Maciullo train 전량 → merged train, val은 **DUT 공식 val만**, 원본 test 2개(DUT-test·Maciullo-test)는 별도 eval로 보존.
 - 병합 결과 `/mnt/ssd_0/dataset/merged_drone`: train **56,646**(DUT 5,200 + Maciullo 51,446) / val 2,600 / test_dut 2,200 · test_maciullo 2,625.
 - 파이프라인: `scripts/fetch_maciullo.py`(취득·감사) → `scripts/merge_datasets.py`(YOLO 통일·leakage-safe 병합) → `scripts/analyze_merge.py`(스케일·배경 비교). 감사·비교·split 매핑은 `reports/`, old vs new 효과는 `reports/old_vs_new.md`.
-- 효과 요약: 지면·근접(Maciullo) 도메인 mAP50 0.601→0.891·FP/img −78%, DUT 공중 초소형은 소폭 trade-off.
+- 효과 요약: Maciullo 도메인 mAP50 0.601→0.891·FP/img −78%, DUT 초소형은 소폭 trade-off.
 
 ```bash
 .venv/bin/python scripts/fetch_maciullo.py      # HF → images + COCO 어노테이션 + AUDIT.md

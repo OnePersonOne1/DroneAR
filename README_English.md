@@ -102,9 +102,9 @@ imgsz 960 (input `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 ## Demo (inference examples)
 
 test set inference — `yolo26n` **merged-300ep** (recommended deploy model), imgsz 640, conf 0.25.
-(`demo/`: aerial DUT-test `image0~9` + ground Maciullo-test `ground0~3`)
+(`demo/`: DUT-test `image0~9` + Maciullo-test `ground0~3`)
 
-| image0 (aerial) | image4 (aerial) | ground1 (ground) |
+| image0 (DUT) | image4 (DUT) | ground1 (Maciullo) |
 |:---:|:---:|:---:|
 | ![image0](demo/image0.jpg) | ![image4](demo/image4.jpg) | ![ground1](demo/ground1.jpg) |
 
@@ -148,7 +148,7 @@ Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.
 
 **Sources**
 - **DUT-Anti-UAV** (base · aerial backgrounds): <https://github.com/wangdongdut/DUT-Anti-UAV>
-- **Maciullo DroneDetectionDataset** (merged · ground / near-field): original <https://github.com/Maciullo/DroneDetectionDataset> · HF mirror used <https://huggingface.co/datasets/pathikg/drone-detection-dataset>
+- **Maciullo DroneDetectionDataset** (merged · near-field / mid-to-large objects): original <https://github.com/Maciullo/DroneDetectionDataset> · HF mirror used <https://huggingface.co/datasets/pathikg/drone-detection-dataset>
 
 ### DUT-Anti-UAV
 
@@ -191,7 +191,7 @@ normalized side `sqrt(w·h)`: median **0.0226** (~14.5px @640), p25 0.0163, p75 
 
 ### Maciullo DroneDetectionDataset — ground-background merge
 
-Merged to fix DUT's weakness on **ground / near-field drones**. Acquired via the HF mirror
+Merged to expand training data (10×, adds a near-field / mid-to-large-object domain). Acquired via the HF mirror
 (`pathikg/drone-detection-dataset`) and materialized to `/mnt/ssd_0/dataset/DroneDetection`.
 
 - Size: train **51,446** / test **2,625** (HF-mirror counts — differs from the official test 5,375).
@@ -204,7 +204,7 @@ Merged to fix DUT's weakness on **ground / near-field drones**. Acquired via the
 - Pipeline: `scripts/fetch_maciullo.py` (acquire+audit) → `scripts/merge_datasets.py`
   (YOLO unify + leakage-safe merge) → `scripts/analyze_merge.py` (scale/background compare).
   Audit/comparison/split-mapping under `reports/`; old-vs-new impact in `reports/old_vs_new.md`.
-- Impact: ground/near-field (Maciullo) mAP50 0.601→0.891 · FP/img −78%; small aerial (DUT) a mild trade-off.
+- Impact: Maciullo-domain mAP50 0.601→0.891 · FP/img −78%; small-object DUT a mild trade-off.
 
 ```bash
 .venv/bin/python scripts/fetch_maciullo.py      # HF → images + COCO ann + AUDIT.md
