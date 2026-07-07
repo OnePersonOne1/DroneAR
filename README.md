@@ -99,28 +99,32 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ## Ablation
 
-구성별 기여 분해 — yolo26n 계열, seed 0, 파이프라인 동일. far = far-recall(<16px@640). 미측정 = "—".
+구성별 기여 분해 — yolo26n(A–F) · **yolo26l(H·I)**, seed 0, 파이프라인 동일. far = far-recall(<16px@640). 미측정 = "—".
 
 | # | merged | 960학습 | P2 | 1280추론 | ep | DUT AP50 | DUT AP50-95 | DUT far | Maci AP50 | Maci AP50-95 | Maci far |
 |---|:---:|:---:|:---:|:---:|---:|---:|---:|---:|---:|---:|---:|
 | A (old) | | | | | 150 | 0.951 | 0.648 | 0.925 | 0.601 | 0.216 | 0.359 |
-| B | | ✓ | | | 150 | **0.968** | **0.699** | — | — | — | — |
+| B | | ✓ | | | 150 | 0.968 | 0.699 | 0.960 | 0.591 | 0.199 | 0.354 |
 | C | ✓ | | | | 100 | 0.927 | 0.619 | 0.820 | **0.891** | 0.445 | 0.783 |
 | D | ✓ | | | | 300 | 0.950 | 0.650 | 0.876 | 0.858 | 0.415 | 0.748 |
-| E | ✓ | ✓ | ✓ | | 100 | 0.966 | 0.690 | 0.933 | 0.888 | **0.447** | 0.793 |
-| F (=E, 추론만 1280) | ✓ | ✓ | ✓ | ✓ | 100 | — | — | **0.943** | — | — | **0.803** |
+| E | ✓ | ✓ | ✓ | | 100 | 0.966 | 0.690 | 0.933 | 0.888 | 0.447 | 0.793 |
+| F (=E, 추론만 1280) | ✓ | ✓ | ✓ | ✓ | 100 | 0.967 | 0.694 | 0.943 | 0.885 | 0.437 | **0.803** |
+| **H (l-P2)** | ✓ | ✓ | ✓ | | 100 | **0.982** | **0.769** | 0.960 | 0.888 | **0.450** | 0.783 |
+| I (=H, 추론만 1280) | ✓ | ✓ | ✓ | ✓ | 100 | 0.982 | 0.766 | **0.968** | 0.888 | 0.441 | 0.793 |
 
 ![training curves](reports/training_curves.png)
 
 - 곡선(검증셋 DUT-val 공통): **해상도(960) = 최대 레버**, 640은 300ep로도 960 미달. merged의 Maciullo 도메인 이득은 이 곡선에 미반영.
-- 병합(A→C): Maciullo +29pt·DUT far −10.5pt → epochs(C→D)·960+P2(C→E)로 회복, 추론 1280(E→F)은 무비용 far 이득.
+- 병합(A→C): Maciullo +29pt·DUT far −10.5pt → epochs(C→D)·960+P2(C→E)로 회복. B(DUT-only 960)는 Maciullo 붕괴(0.591) — 해상도 단독으론 도메인 이전 없음.
+- 모델 스케일(E→H, n→l): DUT AP50-95 **+7.9pt**·far +2.7pt, Maci <8px 0.636→0.727. 추론 1280(E→F, H→I)은 AP 중립·far 무비용 이득.
 - **P2 단독 기여는 미분리**(merged+960+P2無 미학습) — E의 이득은 960+P2 **결합**으로만 주장. 상세: [reports/ablation_matrix.md](reports/ablation_matrix.md).
 
 **배포 권장** (근거는 위 표):
 
 | 경로 | 모델 | 이유 |
 |---|---|---|
-| 클라우드(4090) | **E: merged-P2-960** + 추론 1280 | 전 도메인 최고/동급, far 최고, 4.2ms |
+| 클라우드(4090) | **H: merged-l-P2-960** + 추론 1280 (=I) | 전 도메인 최고/동급, DUT far 0.968, 4090 FP16 103FPS |
+| 클라우드 경량 대안 | E: merged-P2-960 + 추론 1280 (=F) | H 대비 −7pt(AP50-95), 4.2ms(236FPS) |
 | 온디바이스(ML2, ncnn-Vulkan) | **D: merged-300ep** (640) | 무회귀·FP/img 최저 |
 | Maciullo 도메인 특화 | C: merged-100ep (640) | 해당 도메인 AP50 최고 |
 
@@ -164,7 +168,7 @@ scripts/   [데이터] voc2yolo.py  fetch_maciullo.py  merge_datasets.py  analyz
 configs/   dut_drone.yaml  merged_drone.yaml  eval_test_{dut,maciullo}.yaml
 weights/   yolo26{n,s}_drone_{640,960}.pt (+_{fp32,fp16,int8}.onnx)
            yolo26n_drone_640_mergedataset_{100,300}epoch.pt (+onnx, +_ncnn_model/)
-           yolo26n_drone_960p2_mergedataset_100epoch.pt
+           yolo26{n,l}_drone_960p2_mergedataset_100epoch.pt
            metrics.json  parity·latency 리포트(생성물)
 cpp/       drone_detector.{h,cpp}  test_host.cpp  CMakeLists.txt  mlsdk_glue.md  (ncnn-Vulkan)
 docs/      ML2_ONDEVICE_RUNBOOK.md
@@ -320,8 +324,7 @@ python scripts/train.py
 
 ## 개선 로드맵 (소형·원거리)
 
-- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× → [Ablation](#ablation)
-- 진행 🔄: **yolo26l-P2@960** (모델 스케일 레버, 클라우드용)
+- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(모델 스케일, 클라우드용) → [Ablation](#ablation)
 - 예정: **RT-DETR/RF-DETR** 동일 데이터 controlled 비교 → temporal(detect-then-track) 후순위
 - 보류: hard-negative(NEG_DIR) — Maciullo all-positive라 배경 FP 감소엔 별도 negative 셋 필요
 

@@ -26,5 +26,5 @@
 - ML2 영상 1280×720 → **추론 1280 = 무손실**, 1920·타일 불필요.
 
 ## 결론
-- 클라우드(4090): **merged-P2-960 + 추론 1280**. 온디바이스(ML2): 640 모델 유지(300ep).
-- 다음: 모델 스케일(l-P2, ablation H행) → RT-DETR/RF-DETR controlled 비교 → temporal 후순위.
+- 클라우드(4090): **merged-l-P2-960 + 추론 1280** (ablation H·I행 — DUT far 0.968). 경량 대안 n-P2. 온디바이스(ML2): 640 모델 유지(300ep).
+- 다음: RT-DETR/RF-DETR controlled 비교 → temporal 후순위.

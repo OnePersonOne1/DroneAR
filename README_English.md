@@ -17,7 +17,8 @@ merged, 10× training data) → deploy to **Magic Leap 2** (on-device) and/or a 
 | `yolo26n_drone_640` | DUT-only, 150ep | 0.951 / 0.648 | 0.601 / 0.216 | legacy baseline |
 | `..._mergedataset_300epoch` | merged, 640 | 0.950 / 0.650 | 0.858 / 0.415 | **on-device (ML2)** |
 | `..._mergedataset_100epoch` | merged, 640 | 0.927 / 0.619 | 0.891 / 0.445 | Maciullo-domain focus |
-| `yolo26n_drone_960p2_...` | merged, 960+P2 | **0.966 / 0.690** | 0.888 / **0.447** | **cloud (infer at 1280)** |
+| `yolo26n_drone_960p2_...` | merged, 960+P2 | 0.966 / 0.690 | 0.888 / 0.447 | cloud, lightweight |
+| `yolo26l_drone_960p2_...` | merged, 960+P2, **l-scale** | **0.982 / 0.769** | 0.888 / **0.450** | **cloud (infer at 1280)** |
 
 - Ablation (checkbox × AP, attribution limits): [reports/ablation_matrix.md](reports/ablation_matrix.md)
 - Far/small-object analysis & resolution sweep: [reports/far_drone_p2_960.md](reports/far_drone_p2_960.md)
