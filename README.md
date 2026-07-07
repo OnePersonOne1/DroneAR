@@ -12,7 +12,8 @@
 - **모델 결정:** `yolo26n`(nano) 우선, **NMS-free one-to-one head 유지**, `imgsz=640`,
   INT8/FP16 export.
 
-> 상태: 전체 파이프라인 완료 (데이터 → 학습 → 평가 → ML2 export → 벤치 → Docker 검증).
+> 상태: 기본 파이프라인 완료 (데이터 → 학습 → 평가 → ML2 export → 벤치 → Docker 검증).
+> 확장: 데이터 병합(10×) · 960+P2 · 추론 1280 — [Ablation](#ablation) 참조.
 
 > GPU 경로 탐색: RDNA2 iGPU 추론용 **ncnn-Vulkan** 경로 검증은
 > [README_ML2_Vulkan.md](README_ML2_Vulkan.md) 참조 (호스트 4090 Vulkan 검증, ML2 on-device 미검증).
@@ -34,26 +35,7 @@
 > **2×MAC 관례**(곱·합 각 1회 = MACs×2), 정밀도 무관. FLOPs ∝ 입력 픽셀 → 960은 640의 약 2.25배.
 
 - imgsz **960이 640 대비 test mAP50-95 +4~5%p** (소형 객체 ~77% → 해상도 효과 큼). 단 추론 비용 ↑(입력 2.25배).
-- 선택 가이드: 지연 우선 **yolo26n 640**, 정확도 우선 **960**. yolo26s는 정확도 상한선(파라미터 약 4배).
-- 추론 예시: 아래 [Demo](#demo-추론-예시) 섹션.
-
-### 병합 데이터셋 효과 — old vs merged (고정 held-out test, yolo26n 640)
-
-| 모델 | test set | mAP@0.5 | mAP@0.5:0.95 | P | R | FP/img | small-recall(<32px) |
-|---|---|---:|---:|---:|---:|---:|---:|
-| old (DUT-only, 150ep) | DUT-test | 0.951 | 0.648 | 0.963 | 0.922 | 0.063 | 0.932 |
-| merged-100ep | DUT-test | 0.927 | 0.619 | 0.953 | 0.870 | 0.063 | 0.842 |
-| merged-300ep | DUT-test | 0.950 | 0.650 | **0.971** | 0.922 | **0.041** | 0.889 |
-| **merged-P2-960** | DUT-test | **0.966** | **0.690** | 0.962 | **0.926** | 0.067 | **0.934** |
-| old (DUT-only, 150ep) | Maciullo-test | 0.601 | 0.216 | 0.776 | 0.569 | 0.213 | 0.617 |
-| merged-100ep | Maciullo-test | **0.891** | 0.445 | 0.924 | 0.836 | **0.047** | 0.829 |
-| merged-300ep | Maciullo-test | 0.858 | 0.415 | 0.916 | 0.822 | 0.067 | 0.798 |
-| **merged-P2-960** | Maciullo-test | 0.888 | **0.447** | **0.936** | **0.836** | 0.077 | **0.838** |
-
-- **merged-P2-960** (imgsz 960 + P2 head): 전 도메인 최고/동급, far(<16px) recall 최고 — **클라우드(4090) 권장** (4.2ms/236FPS, ML2 온디바이스 아님). 상세: [reports/far_drone_p2_960.md](reports/far_drone_p2_960.md).
-- 300ep(640): 온디바이스(ML2) 권장 — 전 도메인 무회귀, FP/img 최저.
-- 100ep(640): Maciullo 도메인 특화 시 선택. 상세: [reports/old_vs_new.md](reports/old_vs_new.md).
-- 케이스별 학습 곡선(epoch×mAP, DUT-val 공통): [reports/training_curves.png](reports/training_curves.png) — 해상도(960)가 최대 레버, 640은 300ep로도 960 미달.
+- 병합(merged) 모델 성적·구성별 기여: [Ablation](#ablation). 추론 예시: [Demo](#demo-추론-예시).
 
 ### 추론 속도 — GPU (RTX 4090)
 
@@ -134,6 +116,14 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 - 병합(A→C): Maciullo +29pt·DUT far −10.5pt → epochs(C→D)·960+P2(C→E)로 회복, 추론 1280(E→F)은 무비용 far 이득.
 - **P2 단독 기여는 미분리**(merged+960+P2無 미학습) — E의 이득은 960+P2 **결합**으로만 주장. 상세: [reports/ablation_matrix.md](reports/ablation_matrix.md).
 
+**배포 권장** (근거는 위 표):
+
+| 경로 | 모델 | 이유 |
+|---|---|---|
+| 클라우드(4090) | **E: merged-P2-960** + 추론 1280 | 전 도메인 최고/동급, far 최고, 4.2ms |
+| 온디바이스(ML2, ncnn-Vulkan) | **D: merged-300ep** (640) | 무회귀·FP/img 최저 |
+| Maciullo 도메인 특화 | C: merged-100ep (640) | 해당 도메인 AP50 최고 |
+
 ---
 
 ## Demo (추론 예시)
@@ -168,14 +158,20 @@ INT8 모델도 입력은 float32다(Q/DQ는 그래프 내부 처리). 권장 con
 ## 리포지토리 구조
 
 ```
-scripts/   voc2yolo.py  dataset_stats.py  train.py  train_all.sh
-           eval.py  predict.py  export.py  bench_latency.py  bench_gpu.py
-configs/   dut_drone.yaml
-weights/   yolo26{n,s}_drone_{640,960}.pt
-           yolo26{n,s}_drone_{640,960}_{fp32,fp16,int8}.onnx
-           metrics.json  latency_report.md(CPU)  latency_gpu.md(GPU)
-demo/      추론 예시 이미지 (DUT image0~9 + Maciullo ground0~3; README엔 0/8/ground1)
-Dockerfile · docker-compose.yml · .dockerignore · requirements.txt · README.md
+scripts/   [데이터] voc2yolo.py  fetch_maciullo.py  merge_datasets.py  analyze_merge.py  dataset_stats.py
+           [학습·평가] train.py  train_all.sh  eval.py  eval_compare.py  analyze_fn.py  predict.py
+           [export·벤치] export.py  parity_ncnn.py  bench_latency.py  bench_gpu.py  sahi_bench.py
+configs/   dut_drone.yaml  merged_drone.yaml  eval_test_{dut,maciullo}.yaml
+weights/   yolo26{n,s}_drone_{640,960}.pt (+_{fp32,fp16,int8}.onnx)
+           yolo26n_drone_640_mergedataset_{100,300}epoch.pt (+onnx, +_ncnn_model/)
+           yolo26n_drone_960p2_mergedataset_100epoch.pt
+           metrics.json  parity·latency 리포트(생성물)
+cpp/       drone_detector.{h,cpp}  test_host.cpp  CMakeLists.txt  mlsdk_glue.md  (ncnn-Vulkan)
+docs/      ML2_ONDEVICE_RUNBOOK.md
+reports/   ablation_matrix.md(SSOT)  far_drone_p2_960.md  yolo26_family_fps_4090.md
+           training_curves.png  + 생성물(fn_size·sahi·dataset_comparison·old_vs_new 등)
+demo/      추론 예시 (DUT image0~9 + Maciullo ground0~3)
+Dockerfile · docker-compose.yml · requirements.txt
 ```
 
 ---
@@ -322,12 +318,12 @@ python scripts/train.py
 
 ---
 
-## 개선 옵션 (소형 객체)
+## 개선 로드맵 (소형·원거리)
 
-데이터셋 ~77% 소형 → 소형 recall 향상 수단:
-- **imgsz 960 재학습:** `python scripts/train.py --imgsz 960 --name yolo26n_drone_960`
-- **P2 head**(stride-4 세밀 특징): `--model yolo26-p2.yaml` (from scratch) 후 재 export
-- 정확도 여유 필요 시 **yolo26s**
+- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× → [Ablation](#ablation)
+- 진행 🔄: **yolo26l-P2@960** (모델 스케일 레버, 클라우드용)
+- 예정: **RT-DETR/RF-DETR** 동일 데이터 controlled 비교 → temporal(detect-then-track) 후순위
+- 보류: hard-negative(NEG_DIR) — Maciullo all-positive라 배경 FP 감소엔 별도 negative 셋 필요
 
 ---
 

@@ -127,6 +127,7 @@ def main():
 
     Path(a.out + ".json").write_text(json.dumps(out, indent=2))
     L = ["# FN 크기 분석 — 원거리(소형) 드론 미탐 정량화", "",
+         "> 생성물 — `scripts/analyze_fn.py` 재실행 시 덮어써짐.", "",
          f"conf={a.conf}, IoU매칭 0.5, imgsz={a.imgsz}. 크기 = 정규화변 sqrt(w·h)×640 (px).",
          f"**far-drone 지표 = <{a.far_px:g}px GT recall.**", ""]
     for name in out:

@@ -158,10 +158,9 @@ def main():
         sk = [k for k in f if k.startswith("recall_small")][0]
         return (f"| {disp.get(mn, mn)} | {sn} | {m['mAP50']} | {m['mAP50_95']} | {m['precision']} | "
                 f"{m['recall']} | {f['FP_per_image']} | {f[sk]} |")
-    L = ["# Old (DUT-only) vs New (merged) — Phase 4", "",
-         "## 데이터셋 확장",
-         "지면-드론(Maciullo) 데이터를 DUT(공중)에 leakage-safe 병합 → 공중뿐 아니라 "
-         "지면과 겹치는 드론의 탐지 성능을 올렸다.", "",
+    L = ["# old vs new 평가 (생성물)", "",
+         "> `scripts/eval_compare.py` 산출물 — 재실행 시 덮어써짐. 정확도 비교의 단일 출처는 "
+         "[ablation_matrix.md](ablation_matrix.md).", "",
          "## 결과 (고정 held-out test)", "",
          "| 모델 | test set | mAP@0.5 | mAP@0.5:0.95 | P | R | FP/img | small-recall(<32px) |",
          "|---|---|---:|---:|---:|---:|---:|---:|"]

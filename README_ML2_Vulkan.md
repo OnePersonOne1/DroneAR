@@ -4,10 +4,9 @@ ML2 현재 추론은 ONNX Runtime **CPU**(XNNPACK) 경로이며 약 **7 FPS**다
 **ncnn-Vulkan** 으로 활용하는 GPU 추론 경로를 정리한다. 대상 모델은 `yolo26n_drone_640`,
 정밀도 FP16.
 
-> **검증 범위 주의.** ML2 기기가 없어 on-device 측정은 하지 않았다. 추론 코드 정확성과 Vulkan
-> backend 동작·latency 는 **호스트 RTX 4090(Vulkan)** 으로 검증했다(RDNA2 와 동일 ncnn Vulkan
-> backend). ML2의 RDNA2 실측 성능만 on-device 남은 과제 항목으로
->남는다 → [docs/ML2_ONDEVICE_RUNBOOK.md](docs/ML2_ONDEVICE_RUNBOOK.md).
+> **검증 범위.** on-device 미측정(기기 없음). 코드 정확성·Vulkan 동작·latency는 **호스트 RTX
+> 4090(Vulkan)** 검증(RDNA2와 동일 ncnn 백엔드). ML2 실측만 잔여 과제 →
+> [docs/ML2_ONDEVICE_RUNBOOK.md](docs/ML2_ONDEVICE_RUNBOOK.md).
 
 ## 병합 데이터셋 모델 (merged-100ep / merged-300ep)
 

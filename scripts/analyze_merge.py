@@ -121,6 +121,7 @@ def main():
     (rep / "dataset_comparison.json").write_text(json.dumps(out, indent=2))
 
     L = ["# Dataset comparison — DUT vs Maciullo vs merged (train split)", "",
+         "> 생성물 — `scripts/analyze_merge.py` 재실행 시 덮어써짐.", "",
          "## bbox size distribution (from YOLO labels)", "",
          "| set | boxes | side@640 p50 | p5..p95 | small<32px | med | large>96px |",
          "|---|---:|---:|---|---:|---:|---:|"]

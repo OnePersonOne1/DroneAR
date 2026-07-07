@@ -1,15 +1,6 @@
-# Phase 2 — Hard negatives
+# Phase 2 — Hard negatives (skip 기록)
 
-NEG_DIR = "" (unset) -> **skipped**.
-
-## Warning (explicit)
-The Maciullo dataset is effectively all-positive: of 51,446 train images only **1**
-has zero drone boxes (0.00%). The merged train split contains just **4** negative
-(background-only) images total (DUT 3 + Maciullo 1) = 0.007%.
-
-Consequence: **the merge alone does not structurally reduce ground-clutter false
-positives.** To actually suppress background FP on ground/terrain/urban scenes, supply
-label-free hard-negative background images via NEG_DIR (recommended cap: <=15% of train
-to avoid recall degradation). No negatives were added in this run, so any background-FP
-improvement observed in Phase 4 is an incidental effect of data/scale diversity, not of
-targeted hard-negative mining.
+- NEG_DIR 미지정 → **skip**.
+- Maciullo는 사실상 all-positive (train 51,446장 중 무객체 1장). 병합 train 전체 negative 4장(0.007%).
+- 결론: **병합만으로 배경 clutter FP는 구조적으로 안 줄어든다** — 라벨-없는 배경(negative) 셋을 NEG_DIR로 공급해야 함 (train의 ≤15% cap, recall 저하 방지).
+- Phase 4에서 관측된 FP 개선은 데이터 다양성의 부수 효과로 해석할 것.

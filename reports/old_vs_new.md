@@ -1,27 +1,11 @@
-# Old (DUT-only) vs New (merged) — Phase 4
+# old vs new 평가 (생성물)
 
-## 데이터셋 확장
-Maciullo 데이터를 DUT에 leakage-safe 병합(학습 데이터 10×) → 신규 도메인(근접·중대형) 탐지 성능을 올렸다.
+> `scripts/eval_compare.py` 산출물 — 재실행 시 덮어써짐. **정확도 비교의 단일 출처는
+> [ablation_matrix.md](ablation_matrix.md)** (이 파일은 원시 결과 보관용).
 
-## 결과 (고정 held-out test) — 3-way
+마지막 실행: old=DUT-only 150ep / new=merged (100ep·300ep), imgsz 640, 고정 held-out test.
 
-| 모델 | test set | mAP@0.5 | mAP@0.5:0.95 | P | R | FP/img | small-recall(<32px) |
-|---|---|---:|---:|---:|---:|---:|---:|
-| old (DUT-only, 150ep) | DUT-test | 0.951 | 0.648 | 0.963 | 0.922 | 0.063 | 0.932 |
-| merged-100ep | DUT-test | 0.927 | 0.619 | 0.953 | 0.870 | 0.063 | 0.842 |
-| **merged-300ep** | DUT-test | 0.950 | **0.650** | **0.971** | 0.922 | **0.041** | 0.889 |
-| old (DUT-only, 150ep) | Maciullo-test | 0.601 | 0.216 | 0.776 | 0.569 | 0.213 | 0.617 |
-| merged-100ep | Maciullo-test | **0.891** | **0.445** | 0.924 | **0.836** | **0.047** | **0.829** |
-| **merged-300ep** | Maciullo-test | 0.858 | 0.415 | 0.916 | 0.822 | 0.067 | 0.798 |
-
-- 300ep: 전 도메인 무회귀(DUT ≈ old, FP/img 최저) → 범용 권장.
-- 100ep: 이미지-가중 평균 mAP 최고(mAP50 0.907 vs 300ep 0.900) → Maciullo 도메인 위주 배포 시 선택.
-- 둘은 Pareto 관계 — 최적은 배포 도메인 prior 로 결정.
-- best.pt 선택 기준이 DUT-val이라 장기 학습(300ep)이 DUT 쪽으로 재수렴.
-
-> 비교 조건: best.pt vs best.pt, 동일 test set. 이미지 노출량 old 0.70M / 100ep 5.66M / 300ep ~17M — epoch cap이 merged를 불리하게 하지 않음.
-
-## Failure-mode detail
+## Failure-mode detail (원시)
 ```
 {
   "old_DUT_only_150ep": {
@@ -44,5 +28,7 @@ Maciullo 데이터를 DUT에 leakage-safe 병합(학습 데이터 10×) → 신�
   }
 }
 ```
+(GT-empty 이미지 0장 → FP_on_empty=0. n_small/med/large: DUT-test 1380/506/359, Maciullo-test 877/1100/886.)
 
-(GT-empty 이미지는 두 test set 모두 0장 → FP_on_empty=0. n_small/med/large: DUT-test 1380/506/359, Maciullo-test 877/1100/886.)
+- 100ep vs 300ep는 Pareto 관계(이미지-가중 mAP50 0.907 vs 0.900) — 배포 도메인 prior로 선택.
+- 비교 조건: best.pt vs best.pt, 동일 test set. 이미지 노출량 old 0.70M / 100ep 5.66M / 300ep ~17M.

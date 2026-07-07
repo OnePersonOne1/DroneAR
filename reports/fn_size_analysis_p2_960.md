@@ -1,5 +1,7 @@
 # FN 크기 분석 — 원거리(소형) 드론 미탐 정량화
 
+> 생성물 — `scripts/analyze_fn.py` 재실행 시 덮어써짐.
+
 conf=0.25, IoU매칭 0.5, imgsz=960. 크기 = 정규화변 sqrt(w·h)×640 (px).
 **far-drone 지표 = <16px GT recall.**
 

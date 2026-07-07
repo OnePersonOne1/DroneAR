@@ -191,6 +191,7 @@ def main():
 
     Path(a.out + ".json").write_text(json.dumps(out, indent=2))
     L = ["# SAHI 타일/고해상 추론 벤치 — 재학습 없음", "",
+         "> 생성물 — `scripts/sahi_bench.py` 재실행 시 덮어써짐.", "",
          f"모델 고정 `{Path(a.weights).name}`, DUT-test {len(imgs)}장(네이티브 1280×720), "
          f"conf={a.conf}, IoU매칭 0.5. tile640 = 640타일(overlap {a.overlap}) + 전체프레임 + 병합 NMS.",
          "Maciullo-test 는 네이티브 640×480 → 타일링 무의미(단일 타일)라 제외.", "",
