@@ -325,8 +325,22 @@ python scripts/train.py
 ## 개선 로드맵 (소형·원거리)
 
 - 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(모델 스케일, 클라우드용) → [Ablation](#ablation)
-- 예정: **RT-DETR/RF-DETR** 동일 데이터 controlled 비교 → temporal(detect-then-track) 후순위
+- 진행 🔄: **DETR 계열 1차 = D-FINE-N** 학습 중 (아래) → 이후 temporal(detect-then-track) 후순위
 - 보류: hard-negative(NEG_DIR) — Maciullo all-positive라 배경 FP 감소엔 별도 negative 셋 필요
+
+### DETR 계열 1차 — D-FINE-N (진행 🔄)
+
+- 선정: RT-DETR 최소 모델 l(32M) = 온디바이스급 아님 → **D-FINE-N(3.8M, RT-DETR 계보 SOTA, ICLR 2025)**.
+- 학습: merged · 640 · P2 없음 · seed 0 · COCO ckpt tuning · 220ep(스톡) · batch 32(OOM, lr 비례 0.0002). yolo26n C/D행과 동일 선상(테스트셋·imgsz·pretrained 동일).
+- CPU 지연(호스트 i9-13900K, ORT CPU, 640 FP32, [프로토콜 동일](weights/latency_report.md)):
+
+| 모델 | threads=1 | threads=4 |
+|---|---:|---:|
+| yolo26n | 44.0ms (23 FPS) | 13.2ms (76 FPS) |
+| D-FINE-N | 75.5ms (13 FPS) | 26.0ms (39 FPS) |
+
+- CPU **~1.7–2× 느림**(deformable attention·LayerNorm의 CPU 비효율). **ncnn-Vulkan 이식 불가**(grid_sample 미지원) → ML2 GPU 경로 없음, ORT CPU만. ML2 실측 없음(측정 필요).
+- 채택 조건: 정확도 유의미 우위일 때만. 학습 완료 후 AP·far-recall 비교표 갱신 예정(COCO eval 프로토콜 주석 포함).
 
 ---
 
