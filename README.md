@@ -129,6 +129,28 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 | 온디바이스(ML2, ncnn-Vulkan) | **D: merged-300ep** (640) | 무회귀·FP/img 최저 |
 | Maciullo 도메인 특화 | C: merged-100ep (640) | 해당 도메인 AP50 최고 |
 
+### Maciullo 라벨 감사 — AP50 0.89 천장 원인
+
+전 구성(A~I)에서 Maciullo AP50이 0.86~0.89에 수렴 → l-P2 오답 전수 시각화(FN 406·FP 146) 후
+육안 판정(2026-07-08). **FP의 68%가 conf≥0.5** — 상위 케이스 다수는 **GT 박스 품질 문제**로,
+모델이 맞게 탐지해도 IoU<0.5가 되어 FP+FN 이중 감점 → AP 천장 형성. 색: 초록=GT, 빨강=FP 예측.
+
+**FP 상위 — GT 크기 부정확:**
+
+| fp_000318 · GT 과대 | fp_000126 · GT 과대 | fp_002025 · GT 과소 |
+|:---:|:---:|:---:|
+| ![fp_000318](reports/label_audit_examples/fp_000318.jpg) | ![fp_000126](reports/label_audit_examples/fp_000126.jpg) | ![fp_002025](reports/label_audit_examples/fp_002025.jpg) |
+
+**FN 상위 — 라벨 오차·특수 난이도 혼재:**
+
+| fn_000281 · GT 과대 | fn_000807 · 드론 일부만 프레임 | fn_000808 · 자막이 드론 가림 | fn_002018 · 강한 조명(LED) |
+|:---:|:---:|:---:|:---:|
+| ![fn_000281](reports/label_audit_examples/fn_000281.jpg) | ![fn_000807](reports/label_audit_examples/fn_000807.jpg) | ![fn_000808](reports/label_audit_examples/fn_000808.jpg) | ![fn_002018](reports/label_audit_examples/fn_002018.jpg) |
+
+- 결론: Maciullo 0.89 천장은 **순수 모델 한계가 아니라 라벨 품질(박스 크기 오차·누락)+특수 난이도**의 영향.
+  모델 추가 개선의 Maciullo AP 기대치는 이 천장 기준으로 해석할 것.
+- 전체 시각화(506장): `reports/label_audit_maciullo/` (로컬 생성물, 미커밋).
+
 ---
 
 ## Demo (추론 예시)
