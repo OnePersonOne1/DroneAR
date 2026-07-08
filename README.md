@@ -79,6 +79,7 @@ config: ORT **CPUExecutionProvider**, imgsz=640, batch=1, warmup=30, iters=200,
 - **FP16**: ORT CPU에 native fp16 커널 없음 → 속도 이득 없음(크기/이식성 옵션).
 - **INT8**: 단일 스레드에서 가장 빠름. Conv-only QDQ라 4스레드에선 dequant 오버헤드로 이점 축소.
 - 속도는 imgsz 640 기준. 960은 미측정(입력 2.25배).
+- **ML2 온디바이스 실측(2026-07)**: yolo26n 640 CPU **~15 FPS** — i9-13900K 대비 ~1/5 (Zen2). GPU(ncnn-Vulkan)는 미측정.
 
 ### Export 산출물 (정밀도·크기) — NMS-free head, 출력 `[1,300,6]`
 
@@ -339,7 +340,8 @@ python scripts/train.py
 | yolo26n | 44.0ms (23 FPS) | 13.2ms (76 FPS) |
 | D-FINE-N | 75.5ms (13 FPS) | 26.0ms (39 FPS) |
 
-- CPU **~1.7–2× 느림**(deformable attention·LayerNorm의 CPU 비효율). **ncnn-Vulkan 이식 불가**(grid_sample 미지원) → ML2 GPU 경로 없음, ORT CPU만. ML2 실측 없음(측정 필요).
+- CPU **~1.7–2× 느림**(deformable attention·LayerNorm의 CPU 비효율). **ncnn-Vulkan 이식 불가**(grid_sample 미지원) → ML2 GPU 경로 없음, ORT CPU만.
+- ML2 CPU 실측 yolo26n ~15 FPS × 비율 1.7–2 → **D-FINE-N ML2 환산 ~7–9 FPS (추정, 실측 아님)**.
 - 채택 조건: 정확도 유의미 우위일 때만. 학습 완료 후 AP·far-recall 비교표 갱신 예정(COCO eval 프로토콜 주석 포함).
 
 ---

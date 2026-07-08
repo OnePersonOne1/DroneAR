@@ -28,7 +28,7 @@ merged, 10× training data) → deploy to **Magic Leap 2** (on-device) and/or a 
 
 Model + C++ decode module (`cpp/`) + build/runbook: [README_ML2_Vulkan.md](README_ML2_Vulkan.md),
 [docs/ML2_ONDEVICE_RUNBOOK.md](docs/ML2_ONDEVICE_RUNBOOK.md). Host-4090 Vulkan verified
-(parity PASS); on-device measurement pending. ONNX exports (FP32/FP16/INT8) also provided.
+(parity PASS); on-device: CPU ~15 FPS measured (yolo26n@640), Vulkan-GPU pending. ONNX exports (FP32/FP16/INT8) also provided.
 
 ## Datasets
 
