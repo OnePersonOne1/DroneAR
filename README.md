@@ -187,11 +187,13 @@ INT8 모델도 입력은 float32다(Q/DQ는 그래프 내부 처리). 권장 con
 ```
 scripts/   [데이터] voc2yolo.py  fetch_maciullo.py  merge_datasets.py  analyze_merge.py  dataset_stats.py
            [학습·평가] train.py  train_all.sh  eval.py  eval_compare.py  analyze_fn.py  predict.py
+           [DETR 계열] yolo2coco.py  dfine_eval.py  (+configs/dfine/, D-FINE 레포 별도 clone)
            [export·벤치] export.py  parity_ncnn.py  bench_latency.py  bench_gpu.py  sahi_bench.py
 configs/   dut_drone.yaml  merged_drone.yaml  eval_test_{dut,maciullo}.yaml
 weights/   yolo26{n,s}_drone_{640,960}.pt (+_{fp32,fp16,int8}.onnx)
            yolo26n_drone_640_mergedataset_{100,300}epoch.pt (+onnx, +_ncnn_model/)
            yolo26{n,l}_drone_960p2_mergedataset_100epoch.pt
+           dfine_n_drone_640_mergedataset_220epoch.pth
            metrics.json  parity·latency 리포트(생성물)
 cpp/       drone_detector.{h,cpp}  test_host.cpp  CMakeLists.txt  mlsdk_glue.md  (ncnn-Vulkan)
 docs/      ML2_ONDEVICE_RUNBOOK.md
@@ -347,24 +349,29 @@ python scripts/train.py
 
 ## 개선 로드맵 (소형·원거리)
 
-- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(모델 스케일, 클라우드용) → [Ablation](#ablation)
-- 진행 🔄: **DETR 계열 1차 = D-FINE-N** 학습 중 (아래) → 이후 temporal(detect-then-track) 후순위
+- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(모델 스케일, 클라우드용) · **D-FINE-N@640**(DETR 계열 1차, 아래) → [Ablation](#ablation)
+- 진행 🔄: **D-FINE-L@960** (RunPod 4×4090, yolo26l-P2 레시피 동등 비교) → 이후 temporal(detect-then-track) 후순위
 - 보류: hard-negative(NEG_DIR) — Maciullo all-positive라 배경 FP 감소엔 별도 negative 셋 필요
 
-### DETR 계열 1차 — D-FINE-N (진행 🔄)
+### DETR 계열 1차 — D-FINE-N@640 결과
 
 - 선정: RT-DETR 최소 모델 l(32M) = 온디바이스급 아님 → **D-FINE-N(3.8M, RT-DETR 계보 SOTA, ICLR 2025)**.
-- 학습: merged · 640 · P2 없음 · seed 0 · COCO ckpt tuning · 220ep(스톡) · batch 32(OOM, lr 비례 0.0002). yolo26n C/D행과 동일 선상(테스트셋·imgsz·pretrained 동일).
-- CPU 지연(호스트 i9-13900K, ORT CPU, 640 FP32, [프로토콜 동일](weights/latency_report.md)):
+- 학습: merged · 640 · P2 없음 · seed 0 · COCO ckpt tuning · 220ep(스톡) · batch 32(lr 비례 0.0002). yolo26n C/D행과 동일 선상(테스트셋·imgsz·pretrained 동일). 릴리스 = ep191 EMA(`weights/dfine_n_drone_640_mergedataset_220epoch.pth`).
+- 재현: `scripts/yolo2coco.py` → `configs/dfine/` → D-FINE `train.py` → `scripts/dfine_eval.py` (원시 결과 `reports/dfine_n_eval.json`).
 
-| 모델 | threads=1 | threads=4 |
-|---|---:|---:|
-| yolo26n | 44.0ms (23 FPS) | 13.2ms (76 FPS) |
-| D-FINE-N | 75.5ms (13 FPS) | 26.0ms (39 FPS) |
+**정확도 (held-out test)** — far/FP = [동일 greedy 프로토콜](reports/ablation_matrix.md)(conf 0.25·IoU 0.5) 직접 비교 가능. *AP는 산출기 상이(D-FINE=COCO eval, yolo=ultralytics) → 참고 비교*:
 
-- CPU **~1.7–2× 느림**(deformable attention·LayerNorm의 CPU 비효율). **ncnn-Vulkan 이식 불가**(grid_sample 미지원) → ML2 GPU 경로 없음, ORT CPU만.
-- ML2 CPU 실측 yolo26n ~15 FPS × 비율 1.7–2 → **D-FINE-N ML2 환산 ~7–9 FPS (추정, 실측 아님)**.
-- 채택 조건: 정확도 유의미 우위일 때만. 학습 완료 후 AP·far-recall 비교표 갱신 예정(COCO eval 프로토콜 주석 포함).
+| 모델 (640) | DUT AP50/AP50-95* | DUT far | DUT <8px | Maci AP50/AP50-95* | Maci far | FP/img(DUT·Maci) |
+|---|---|---:|---:|---|---:|---|
+| yolo26n 100ep (C) | 0.927 / 0.619 | 0.820 | — | **0.891** / 0.445 | 0.783 | 0.06 · 0.05 |
+| yolo26n 300ep (D) | 0.950 / 0.650 | 0.876 | 0.706 | 0.858 / 0.415 | 0.748 | 0.04 · 0.07 |
+| **D-FINE-N 220ep** | 0.951 / **0.705*** | **0.944** | **0.934** | 0.866 / 0.428* | **0.818** | 0.08 · 0.20 |
+
+![dfine vs yolo26n curves](reports/dfine_n_vs_yolo26n_curves.png)
+
+- **far-recall(동일 프로토콜): DUT +6.8pt(vs D)·Maciullo +3.5pt(vs C)** — 640·P2 없이 yolo26n-P2@960(E: 0.933)급 far. DETR 계열의 소형 객체 강점 확인.
+- 트레이드오프: **FP/img 높음**(Maciullo 0.20 vs 0.05~0.07) — conf 스윕/라벨 노이즈 감안 필요. Maciullo AP50은 0.89 천장(라벨 품질) 아래 동급.
+- 배포: CPU ~1.7–2× 느림(위 표: i9 threads=4 26.0ms vs 13.2ms) · **ncnn-Vulkan 이식 불가**(grid_sample) → ML2 CPU 환산 **~7–9 FPS(추정)**. **온디바이스 주력은 yolo26n 유지**, D-FINE은 클라우드 후보(L@960 진행 중).
 
 ---
 
