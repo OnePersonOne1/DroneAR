@@ -35,7 +35,7 @@
 > **2×MAC 관례**(곱·합 각 1회 = MACs×2), 정밀도 무관. FLOPs ∝ 입력 픽셀 → 960은 640의 약 2.25배.
 
 - imgsz **960이 640 대비 test mAP50-95 +4~5%p** (소형 객체 ~77% → 해상도 효과 큼). 단 추론 비용 ↑(입력 2.25배).
-- 병합(merged) 모델 성적·구성별 기여: [Ablation](#ablation). 추론 예시: [Demo](#demo-추론-예시).
+- merged 데이터셋 학습 모델 성적·구성별 기여: [Ablation](#ablation). 추론 예시: [Demo](#demo-추론-예시).
 
 ### 추론 속도 — GPU (RTX 4090)
 
@@ -49,7 +49,7 @@ torch CUDA(`cuda.Event` 계측), FPS = 1000/mean. 측정 하드웨어 **NVIDIA R
 | yolo26s | FP32 | 2.44 ± 0.14 | 410 |
 | yolo26s | FP16 | 2.57 ± 0.08 | 389 |
 
-- batch=1·작은 모델은 RTX 4090을 포화시키지 못해 커널 실행·메모리 대역폭에 묶임(GPU 미포화) → 모델·정밀도 간 차이가 작다.
+- batch=1·작은 모델은 RTX 4090을 포화시키지 못해 커널 실행·메모리 대역폭에 묶임(GPU 미포화) → 모델·정밀도 간 지연 차이가 작다.
 
 **정밀도별 GPU 적합성** (산출물은 모두 ONNX):
 
@@ -59,7 +59,7 @@ torch CUDA(`cuda.Event` 계측), FPS = 1000/mean. 측정 하드웨어 **NVIDIA R
 | FP16 | GPU/NPU 친화(반정밀) | 이득 ↑ (CPU는 native 커널 없어 이득 X) |
 | INT8 | CPU/XNNPACK 지향(QDQ Conv-only) | INT8 가속 못 받음 ⚠️: 그러나 ML2 환경에서는 가장 적합할 것으로 예상. |
 
-INT8 GPU 가속은 TensorRT 엔진 별도 빌드 필요(현재 미측정). 정확도는 디바이스 불변 — 차이는 속도뿐.
+INT8 GPU 가속은 TensorRT 엔진 별도 빌드 필요.
 
 ### 추론 속도 — CPU (i9-13900K, ONNX Runtime)
 
@@ -115,10 +115,11 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ![training curves](reports/training_curves.png)
 
-- 곡선(검증셋 DUT-val 공통): **해상도(960) = 최대 레버**, 640은 300ep로도 960 미달. merged의 Maciullo 도메인 이득은 이 곡선에 미반영.
+- 곡선(검증셋 DUT-val 공통): **학습 해상도(960) = 성능 최대폭 향상**, 640은 300ep로도 960 미달. merged의 Maciullo 도메인 이득은 이 곡선에 미반영.
 - 병합(A→C): Maciullo +29pt·DUT far −10.5pt → epochs(C→D)·960+P2(C→E)로 회복. B(DUT-only 960)는 Maciullo 붕괴(0.591) — 해상도 단독으론 도메인 이전 없음.
-- 모델 스케일(E→H, n→l): DUT AP50-95 **+7.9pt**·far +2.7pt, Maci <8px 0.636→0.727. 추론 1280(E→F, H→I)은 AP 중립·far 무비용 이득.
-- **P2 단독 기여는 미분리**(merged+960+P2無 미학습) — E의 이득은 960+P2 **결합**으로만 주장. 상세: [reports/ablation_matrix.md](reports/ablation_matrix.md).
+- 모델 스케일(E→H, n→l): DUT AP50-95 **+7.9pt**·far +2.7pt, Maci <8px 0.636→0.727.
+- 추론 해상도 1280(E→F, H→I)은 AP 중립·그러나 far의 경우 이득.
+- 상세: [reports/ablation_matrix.md](reports/ablation_matrix.md).
 
 **배포 권장** (근거는 위 표):
 
@@ -126,13 +127,12 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 |---|---|---|
 | 클라우드(4090) | **H: merged-l-P2-960** + 추론 1280 (=I) | 전 도메인 최고/동급, DUT far 0.968, 4090 FP16 103FPS |
 | 클라우드 경량 대안 | E: merged-P2-960 + 추론 1280 (=F) | H 대비 −7pt(AP50-95), 4.2ms(236FPS) |
-| 온디바이스(ML2, ncnn-Vulkan) | **D: merged-300ep** (640) | 무회귀·FP/img 최저 |
-| Maciullo 도메인 특화 | C: merged-100ep (640) | 해당 도메인 AP50 최고 |
+| 온디바이스(ML2, ncnn-Vulkan) | **D: merged-300ep** (640) | FP/img 최저 |
 
 ### Maciullo 라벨 감사 — AP50 0.89 천장 원인
 
 전 구성(A~I)에서 Maciullo AP50이 0.86~0.89에 수렴 → l-P2 오답 전수 시각화(FN 406·FP 146) 후
-육안 판정(2026-07-08). **FP의 68%가 conf≥0.5** — 상위 케이스 다수는 **GT 박스 품질 문제**로,
+육안 판정(2026-07-08). **FP의 68%가 conf≥0.5** — 확인 결과 상위 케이스 다수는 **GT 박스 품질 문제**로,
 모델이 맞게 탐지해도 IoU<0.5가 되어 FP+FN 이중 감점 → AP 천장 형성. 색: 초록=GT, 빨강=FP 예측.
 
 **FP 상위 — GT 크기 부정확:**
@@ -141,13 +141,13 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 |:---:|:---:|:---:|
 | ![fp_000318](reports/label_audit_examples/fp_000318.jpg) | ![fp_000126](reports/label_audit_examples/fp_000126.jpg) | ![fp_002025](reports/label_audit_examples/fp_002025.jpg) |
 
-**FN 상위 — 라벨 오차·특수 난이도 혼재:**
+**FN 상위 — 라벨 오차·특수 케이스 혼재:**
 
 | fn_000281 · GT 과대 | fn_000807 · 드론 일부만 프레임 | fn_000808 · 자막이 드론 가림 | fn_002018 · 강한 조명(LED) |
 |:---:|:---:|:---:|:---:|
 | ![fn_000281](reports/label_audit_examples/fn_000281.jpg) | ![fn_000807](reports/label_audit_examples/fn_000807.jpg) | ![fn_000808](reports/label_audit_examples/fn_000808.jpg) | ![fn_002018](reports/label_audit_examples/fn_002018.jpg) |
 
-- 결론: Maciullo 0.89 천장은 **순수 모델 한계가 아니라 라벨 품질(박스 크기 오차·누락)+특수 난이도**의 영향.
+- 결론: Maciullo 0.89 천장은 **라벨 품질(박스 크기 오차·누락)+특수 케이스(조명)**의 영향.
   모델 추가 개선의 Maciullo AP 기대치는 이 천장 기준으로 해석할 것.
 - 전체 시각화(506장): `reports/label_audit_maciullo/` (로컬 생성물, 미커밋).
 
@@ -174,11 +174,11 @@ ONNX를 추론 엔진에 통합할 때 필요한 입출력 방식에 대해서 �
 |------|------|
 | 입력 | `images` `(1,3,640,640)` — float32(FP32·INT8) / float16(FP16) |
 | 전처리 | **letterbox 640 · RGB · `/255` · CHW** (종횡비 보존 패딩, pad=114) |
-| 출력 | `output0` `(1,300,6)` = `[x1,y1,x2,y2,score,class]`, 640 letterbox **픽셀** 좌표 |
+| 출력 | `output0` `(1,300,6)` = `[x1,y1,x2,y2,score,class]`, 640 letterbox 픽셀 좌표 |
 | 후처리 | **NMS 불필요**(one-to-one head). `score ≥ 0.25` 필터 → letterbox 역산(패딩 빼고 scale로 나눔) → 원본 좌표 |
 | 클래스 | `0 = drone` (단일 클래스, `nc=1`) |
 
-INT8 모델도 입력은 float32다(Q/DQ는 그래프 내부 처리). 권장 conf 임계값 0.25는 디바이스에서 튜닝한다.
+INT8 모델도 입력은 float32다(Q/DQ는 그래프 내부 처리). 권장 conf 0.25는 임의로 설정했다.
 
 ---
 
@@ -209,12 +209,12 @@ Dockerfile · docker-compose.yml · requirements.txt
 
 **출처 (Sources)**
 - **DUT-Anti-UAV** (기본): <https://github.com/wangdongdut/DUT-Anti-UAV>
-- **Maciullo DroneDetectionDataset** (병합 · 근접·중대형): 원본 <https://github.com/Maciullo/DroneDetectionDataset> · 사용한 HF mirror <https://huggingface.co/datasets/pathikg/drone-detection-dataset>
+- **Maciullo DroneDetectionDataset** (비교적  큰 데이터셋): 원본 <https://github.com/Maciullo/DroneDetectionDataset> · 사용한 HF mirror <https://huggingface.co/datasets/pathikg/drone-detection-dataset>
 
 ### DUT-Anti-UAV
 
 DUT-Anti-UAV는 수동 준비. 아래 PASCAL VOC 구조로 `/mnt/ssd_0/dataset/DUT`에 배치/압축해제한다.
-변환 스크립트는 이 트리를 **수정하지 않는다**(read-only).
+변환 스크립트는 이 트리를 직접 수정하지 않는다(read-only).
 
 ```
 /mnt/ssd_0/dataset/DUT/{train,val,test}/{img,xml}
@@ -248,7 +248,7 @@ python scripts/dataset_stats.py   # 박스 크기 히스토그램 + 샘플 박�
 | LARGE (변 >96px) | 10.3% |
 | tiny (<13px, 정규화변 <0.02) | 40.6% |
 
-→ 드론 대부분 소형. 기본 `imgsz=640`(ML2 타깃) 유지. 소형 recall 향상 수단은 **imgsz=960·P2 head**.
+→ 드론 대부분 소형. small 및 tiny object recall 향상 수단 고려 필요(p2, imgsz up, larger models, DETRs).
 
 ### Maciullo DroneDetectionDataset — 병합
 
@@ -257,8 +257,8 @@ python scripts/dataset_stats.py   # 박스 크기 히스토그램 + 샘플 박�
 - 규모: train **51,446** / test **2,625** (HF mirror 값 — 공식 test 5,375과 다름). 전부 640×480, COCO xywh, 단일 class(`drone`).
 - 578개 영상 파생이나 **HF mirror에 video_id 없음** → sequence provenance 복원 불가. **leakage-safe fallback**: Maciullo train 전량 → merged train, val은 **DUT 공식 val만**, 원본 test 2개(DUT-test·Maciullo-test)는 별도 eval로 보존.
 - 병합 결과 `/mnt/ssd_0/dataset/merged_drone`: train **56,646**(DUT 5,200 + Maciullo 51,446) / val 2,600 / test_dut 2,200 · test_maciullo 2,625.
-- 파이프라인: `scripts/fetch_maciullo.py`(취득·감사) → `scripts/merge_datasets.py`(YOLO 통일·leakage-safe 병합) → `scripts/analyze_merge.py`(스케일·배경 비교). 감사·비교·split 매핑은 `reports/`, old vs new 효과는 `reports/old_vs_new.md`.
-- 효과 요약: Maciullo 도메인 mAP50 0.601→0.891·FP/img −78%, DUT 초소형은 소폭 trade-off.
+- 파이프라인: `scripts/fetch_maciullo.py`(데이터셋 취득) → `scripts/merge_datasets.py`(YOLO 형식 통일) → `scripts/analyze_merge.py`(스케일 및 배경 비교). 데이터셋 분석·비교·split 매핑은 `reports/`, old vs new 효과는 `reports/old_vs_new.md`.
+- 효과 요약: Maciullo 도메인 mAP50 0.601→0.891·FP/img −78%, DUT 초소형은 소폭 하락, 즉, trade-off.
 
 ```bash
 .venv/bin/python scripts/fetch_maciullo.py      # HF → images + COCO 어노테이션 + AUDIT.md
@@ -272,7 +272,7 @@ python scripts/dataset_stats.py   # 박스 크기 히스토그램 + 샘플 박�
 
 ### 방법 A — Docker
 
-Docker Hub 이미지: **`hanmyeongil/yolo26:v1`** (빌드 없이 바로 사용).
+Docker Hub 이미지: `hanmyeongil/yolo26:v1`.
 
 ```bash
 docker compose pull      # Docker Hub에서 이미지 받기 (또는 docker compose build 로 직접 빌드)
@@ -283,7 +283,7 @@ docker compose run --rm dronear python scripts/export.py
 
 > ⚠️ **작업 경로 필수 설정.** `docker compose`는 **`docker-compose.yml`이 있는 repo 루트에서**
 > 실행한다. 다른 경로에서 실행하면 compose 파일·상대 볼륨(`./scripts`, `./weights`, `./runs`)을
-> 못 찾아 엉뚱한(새) 경로 기준으로 동작한다. 컨테이너 작업 디렉터리는 `working_dir=/workspace`
+> 못 찾아 엉뚱한 경로 기준으로 동작한다. 컨테이너 작업 디렉터리는 `working_dir=/workspace`
 > 고정이며, `scripts/`·`configs/`·`weights/`·`runs/`가 여기에 마운트된다.
 >
 > `docker run`을 직접 쓸 때도 `-w /workspace` + repo 루트를 `/workspace`로 마운트해야 한다:
@@ -334,7 +334,7 @@ python scripts/train.py
 
 **학습 설정(ML2 baseline):** `yolo26n.pt`, `imgsz=640`, `epochs=150`, `patience=40`,
 `batch=-1`(자동 → 4090에서 ~35), `cache=disk`, NMS-free head 유지. `yolo26s`는 정확도 비교군.
-5-epoch 스모크 수렴 확인(mAP50 0.62→0.81).
+5-epoch 학습 테스트 시 수렴 확인(mAP50 0.62→0.81).
 
 ### Troubleshooting (환경 이슈 — requirements 반영)
 
@@ -349,7 +349,7 @@ python scripts/train.py
 
 ## 개선 로드맵 (소형·원거리)
 
-- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(모델 스케일, 클라우드용) · **D-FINE-N@640**(DETR 계열 1차, 아래) → [Ablation](#ablation)
+- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(더 큰 모델, 클라우드용) · **D-FINE-N@640**(DETR류) → [Ablation](#ablation)
 - 진행 🔄: **D-FINE-L@960** (RunPod 4×4090, yolo26l-P2 레시피 동등 비교) → 이후 temporal(detect-then-track) 후순위
 - 보류: hard-negative(NEG_DIR) — Maciullo all-positive라 배경 FP 감소엔 별도 negative 셋 필요
 
@@ -357,7 +357,7 @@ python scripts/train.py
 
 - 선정: RT-DETR 최소 모델 l(32M) = 온디바이스급 아님 → **D-FINE-N(3.8M, RT-DETR 계보 SOTA, ICLR 2025)**.
 - 학습: merged · 640 · P2 없음 · seed 0 · COCO ckpt tuning · 220ep(스톡) · batch 32(lr 비례 0.0002). yolo26n C/D행과 동일 선상(테스트셋·imgsz·pretrained 동일). 릴리스 = ep191 EMA(`weights/dfine_n_drone_640_mergedataset_220epoch.pth`).
-- 재현: `scripts/yolo2coco.py` → `configs/dfine/` → D-FINE `train.py` → `scripts/dfine_eval.py` (원시 결과 `reports/dfine_n_eval.json`).
+- 재현: `scripts/yolo2coco.py` → `configs/dfine/` → D-FINE `train.py` → `scripts/dfine_eval.py` (결과 `reports/dfine_n_eval.json`).
 
 **연산량·속도 스펙 (640, 실측)**:
 
@@ -366,7 +366,7 @@ python scripts/train.py
 | yolo26n | 2.5M | 5.8 | 2.3ms (433FPS) | 13.2ms (76FPS) | ~15 FPS 실측 |
 | D-FINE-N | 3.7M | 7.1 | 4.3ms (235FPS) | 26.0ms (39FPS) | ~7–9 FPS 추정 |
 
-- GFLOPs는 **1.2×**인데 CPU 지연은 **2×** — FLOPs가 아니라 **커널 효율**(deformable attention·LayerNorm의 CPU 비친화) 차이. (산출: yolo=ultralytics profile, D-FINE=calflops — 동일 MACs×2 관례.)
+- GFLOPs는 **1.2×**인데 CPU 지연은 **2×** — FLOPs가 아니라 커널 효율(deformable attention·LayerNorm의 CPU 비친화) 차이로 인한 것으로 추정. (산출: yolo=ultralytics profile, D-FINE=calflops — 동일 MACs×2 관례.)
 
 **정확도 (held-out test)** — far/FP = [동일 greedy 프로토콜](reports/ablation_matrix.md)(conf 0.25·IoU 0.5) 직접 비교 가능. *AP는 산출기 상이(D-FINE=COCO eval, yolo=ultralytics) → 참고 비교*:
 
@@ -378,7 +378,7 @@ python scripts/train.py
 
 ![dfine vs yolo26n curves](reports/dfine_n_vs_yolo26n_curves.png)
 
-- **far-recall(동일 프로토콜): DUT +6.8pt(vs D)·Maciullo +3.5pt(vs C)** — 640·P2 없이 yolo26n-P2@960(E: 0.933)급 far. DETR 계열의 소형 객체 강점 확인.
+- **far-recall(동일 프로토콜): DUT +6.8pt(vs D)·Maciullo +3.5pt(vs C)** — 640·P2 없이 yolo26n-P2@960(E: 0.933)급 far. query 방식인 DETR 계열의 small object detection 강점 확인.
 
 **구성·입력 특이점 비교**:
 
@@ -401,11 +401,11 @@ python scripts/train.py
 | 1280 | 0.598 / 0.369 / 0.162 | 2.09 | 0.715 / 0.495 / 0.273 | 2.59 |
 
 - **YOLO와 정반대**: pos-emb 재생성에도 붕괴 — 쿼리·anchor가 학습 스케일 특화. 붕괴 속도는 도메인별(DUT 초소형은 960부터, Maciullo 중대형은 1280부터) = 학습 픽셀 스케일 이탈량에 비례. **"960 학습+1280 추론" 레시피는 DETR 계열 이식 불가** → D-FINE-L@960(학습 예정, 미완)은 **추론 960 고정** 전제, 1280은 검증만.
-- 역설: 스트라이드 16/32뿐인데 far 0.944 — DETR의 소형 강점은 P2·해상도가 아니라 **쿼리 메커니즘**에서 나옴.
+- 역설: 스트라이드 16/32뿐인데 far 0.944 — DETR의 small object detection 강점은 P2·해상도가 아니라 **query 메커니즘**에서 나옴.
 - 트레이드오프: **FP/img 높음**(Maciullo 0.20 vs 0.05~0.07) — conf 스윕/라벨 노이즈 감안 필요. Maciullo AP50은 0.89 천장(라벨 품질) 아래 동급.
-- 배포: CPU ~1.7–2× 느림(i9 threads=4 26.0ms vs 13.2ms) · **ncnn-Vulkan 이식 불가**(grid_sample) → **온디바이스 주력은 yolo26n 유지**, D-FINE은 클라우드 후보(L@960 진행 중).
+- 배포: CPU ~1.7–2× 느림(i9 threads=4 26.0ms vs 13.2ms) · **ncnn-Vulkan 이식 불가**(grid_sample) → **온디바이스 주력은 yolo26n 유지 권장**, D-FINE은 클라우드 후보(L@960 진행 중).
 
-**ML2 배포 경로 — D-FINE (요약)**: "불가"가 아니라 "CPU만, 느림".
+**ML2 배포 경로 — D-FINE (요약)**: CPU만, yolo26n에 비해 느림.
 
 | ML2 경로 | yolo26n | D-FINE-N |
 |---|---|---|
@@ -416,7 +416,7 @@ python scripts/train.py
 
 ![dfine ml2 tradeoff](reports/dfine_n_ml2_tradeoff.png)
 
-- 거래 구조: **far +6.8pt ↔ fps 절반**. 원거리 최우선이면 ORT CPU 실측 1회로 판정 가능(ONNX 교체만, NMS-free 동일).
+- trade-off: **far +6.8pt ↔ fps 1/2**.
 
 ---
 
@@ -444,7 +444,7 @@ python scripts/train.py
 | D-FINE-N | **640×640 정사각**(=학습) | 타 설정 전부 열화 |
 | D-FINE-L@960 (학습 예정) | 960×960 정사각(=학습) 전제 | N의 스케일 특화 성질 준용 |
 
-- 원리: YOLO = 순수 conv → 스케일 일반화(극단 갭만 한계). DETR = 쿼리·anchor 학습 스케일 특화 → 해상도 잠금.
+- 원리: YOLO = 순수 conv → 스케일 일반화. DETR = 쿼리·anchor 학습 스케일 특화 → 해상도 잠금.
 - 한 줄 규칙: **D-FINE은 학습 입력을 그대로, YOLO는 최적 추론 해상도를 별도 탐색.**
 
 ---
