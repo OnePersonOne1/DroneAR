@@ -102,8 +102,8 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 구성별 기여 분해 — yolo26n(A–F) · **yolo26l(H·I)**, seed 0, 파이프라인 동일. 미측정 = "—".
 
-> **far 기준** = 픽셀 크기 프록시(물리 거리 아님): GT 한 변 환산 `sqrt(w·h)×640` **< 16px**인 객체의 recall.
-> 원거리일수록 작게 찍히는 성질을 이용한 근사. **<8px** = far의 부분집합(극원거리, 최난이도 꼬리).
+> **far 기준** = 픽셀 크기: GT 한 변 환산 `sqrt(w·h)×640` **< 16px**인 객체의 recall.
+> **<8px** = far에서 극원거리, 최난이도 꼬리.
 
 | # | merged | 960학습 | P2 | 1280추론 | ep | DUT AP50 | DUT AP50-95 | DUT far | Maci AP50 | Maci AP50-95 | Maci far |
 |---|:---:|:---:|:---:|:---:|---:|---:|---:|---:|---:|---:|---:|
@@ -134,7 +134,7 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 
 ### Maciullo 라벨 감사 — AP50 0.89 천장 원인
 
-전 구성(A~I)에서 Maciullo AP50이 0.86~0.89에 수렴 → l-P2 오답 전수 시각화(FN 406·FP 146) 후
+전 구성(A~I)에서 Maciullo AP50이 0.86-0.89에 수렴 → l-P2 오답 전수 시각화(FN 406·FP 146) 후
 육안 판정(2026-07-08). **FP의 68%가 conf≥0.5** — 확인 결과 상위 케이스 다수는 **GT 박스 품질 문제**로,
 모델이 맞게 탐지해도 IoU<0.5가 되어 FP+FN 이중 감점 → AP 천장 형성. 색: 초록=GT, 빨강=FP 예측.
 
@@ -391,8 +391,8 @@ python scripts/train.py
 |:---:|:---:|:---:|
 | DUT · 19×8px · **conf 0.83** · 지붕 배경 | DUT · 26×8px · **conf 0.76** · 건물 경계선 | Maciullo · 7×6px · **conf 0.71** · 하늘 배경 |
 
-- 3건 모두 side<8px(극원거리 꼬리) · yolo26n-300ep는 IoU<0.1(박스 자체 없음). 전수 후보 126건: `reports/dfine_wins_yolo_misses/`(로컬).
-- 강점 위치: 배경 clutter(지붕·경계선) 위 극소형 — query가 P2·고해상도 없이 포착.
+- 3건 모두 side<8px(장거리) · yolo26n-300ep는 IoU<0.1(즉, bbox 없음). 이러한 D-FINE만 탐지해낸 126건: `reports/dfine_wins_yolo_misses/`(용량상 로컬에만 있음).
+- D-FINE 강점: 배경 clutter(지붕·경계선) 위 극소형 객체 탐지.
 
 **구성·입력 특이점 비교**:
 
@@ -406,7 +406,7 @@ python scripts/train.py
 | 전처리 | letterbox | 〃 | 정사각 resize(왜곡) |
 | 해상도 결합부 | 없음(순수 conv) | 〃 | anchor·pos-emb **해상도별 프리컴퓨트** |
 
-**추론 해상도 스윕 (D-FINE-N, 640 학습·재학습 없음)** — 원시: `reports/dfine_n_eval{,_960,_1280}.json`:
+**추론 해상도 변경 (D-FINE-N, 640 학습 및 추가 재학습 없음)** — 원본: `reports/dfine_n_eval{,_960,_1280}.json`:
 
 | 추론 imgsz | DUT AP50 / far / <8px | DUT FP/img | Maci AP50 / far / <8px | Maci FP/img |
 |---|---|---:|---|---:|
@@ -415,9 +415,9 @@ python scripts/train.py
 | 1280 | 0.598 / 0.369 / 0.162 | 2.09 | 0.715 / 0.495 / 0.273 | 2.59 |
 
 - **YOLO와 정반대**: pos-emb 재생성에도 붕괴 — 쿼리·anchor가 학습 스케일 특화. 붕괴 속도는 도메인별(DUT 초소형은 960부터, Maciullo 중대형은 1280부터) = 학습 픽셀 스케일 이탈량에 비례. **"960 학습+1280 추론" 레시피는 DETR 계열 이식 불가** → D-FINE-L@960(학습 예정, 미완)은 **추론 960 고정** 전제, 1280은 검증만.
-- 역설: 스트라이드 16/32뿐인데 far 0.944 — DETR의 small object detection 강점은 P2·해상도가 아니라 **query 메커니즘**에서 나옴.
-- 트레이드오프: **FP/img 높음**(Maciullo 0.20 vs 0.05~0.07) — conf 스윕/라벨 노이즈 감안 필요. Maciullo AP50은 0.89 천장(라벨 품질) 아래 동급.
-- 배포: CPU ~1.7–2× 느림(i9 threads=4 26.0ms vs 13.2ms) · **ncnn-Vulkan 이식 불가**(grid_sample) → **온디바이스 주력은 yolo26n 유지 권장**, D-FINE은 클라우드 후보(L@960 진행 중).
+- 역설: 스트라이드 16/32뿐인데 far 0.944 — DETR의 small object detection 강점: Grid cell을 사용하는 CNN 방식과 달리 query 방식을 사용하므로 small object detection에 상대적으로 강함.
+- 트레이드오프: **FP/img 높음**(Maciullo 0.20 vs 0.05~0.07) — conf 스윕/라벨 노이즈 감안 필요. Maciullo AP50은 0.89 천장(라벨 품질로 인한)과 거의 동급.
+- 배포: CPU ~1.7–2× 느림(i9 threads=4 26.0ms vs 13.2ms) · **ncnn-Vulkan 이식 불가**(grid_sample) → **온디바이스 주력은 yolo26n 유지 권장**, D-FINE은 클라우드로.
 
 **ML2 배포 경로 — D-FINE (요약)**: CPU만, yolo26n에 비해 느림.
 
