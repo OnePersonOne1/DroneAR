@@ -371,7 +371,20 @@ python scripts/train.py
 
 - **far-recall(동일 프로토콜): DUT +6.8pt(vs D)·Maciullo +3.5pt(vs C)** — 640·P2 없이 yolo26n-P2@960(E: 0.933)급 far. DETR 계열의 소형 객체 강점 확인.
 - 트레이드오프: **FP/img 높음**(Maciullo 0.20 vs 0.05~0.07) — conf 스윕/라벨 노이즈 감안 필요. Maciullo AP50은 0.89 천장(라벨 품질) 아래 동급.
-- 배포: CPU ~1.7–2× 느림(위 표: i9 threads=4 26.0ms vs 13.2ms) · **ncnn-Vulkan 이식 불가**(grid_sample) → ML2 CPU 환산 **~7–9 FPS(추정)**. **온디바이스 주력은 yolo26n 유지**, D-FINE은 클라우드 후보(L@960 진행 중).
+- 배포: CPU ~1.7–2× 느림(i9 threads=4 26.0ms vs 13.2ms) · **ncnn-Vulkan 이식 불가**(grid_sample) → **온디바이스 주력은 yolo26n 유지**, D-FINE은 클라우드 후보(L@960 진행 중).
+
+**ML2 배포 경로 — D-FINE (요약)**: "불가"가 아니라 "CPU만, 느림".
+
+| ML2 경로 | yolo26n | D-FINE-N |
+|---|---|---|
+| ORT CPU | ✅ **~15 FPS 실측** | ✅ ONNX 확인, **~7–9 FPS 추정** |
+| ncnn-Vulkan (RDNA2 GPU) | ✅ 현 배포 경로 | ❌ grid_sample 미지원 |
+| NNAPI·TFLite GPU delegate | — | ❌ attention op 커버리지 없음 → CPU fallback |
+| TensorRT FP16 | — | 클라우드(4090) 전용 |
+
+![dfine ml2 tradeoff](reports/dfine_n_ml2_tradeoff.png)
+
+- 거래 구조: **far +6.8pt ↔ fps 절반**. 원거리 최우선이면 ORT CPU 실측 1회로 판정 가능(ONNX 교체만, NMS-free 동일).
 
 ---
 
