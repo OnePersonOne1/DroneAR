@@ -44,12 +44,12 @@ def bin_of(side):
     return len(BINS) - 1
 
 
-def load_model(dfine_root, config, ckpt, imgsz, device):
+def load_model(dfine_root, config, ckpt, size_hw, device):
     sys.path.insert(0, dfine_root)
     from src.core import YAMLConfig
     cfg = YAMLConfig(str(Path(dfine_root) / config) if not Path(config).is_absolute() else config)
     cfg.yaml_cfg["HGNetv2"]["pretrained"] = False
-    cfg.yaml_cfg["eval_spatial_size"] = [imgsz, imgsz]
+    cfg.yaml_cfg["eval_spatial_size"] = list(size_hw)
     model = cfg.model
     state = torch.load(ckpt, map_location="cpu", weights_only=False)
     weights = state["ema"]["module"] if "ema" in state else state["model"]
@@ -65,11 +65,24 @@ def load_model(dfine_root, config, ckpt, imgsz, device):
 
 
 @torch.no_grad()
-def eval_split(model, post, split, imgsz, device, conf, iou_match, batch=16):
+def eval_split(model, post, split, size_hw, device, conf, iou_match, pre="square", batch=16):
     img_dir, lbl_dir = ROOT / "images" / split, ROOT / "labels" / split
     ann = json.loads((ROOT / "annotations" / f"{split}.json").read_text())
     name2id = {im["file_name"]: im["id"] for im in ann["images"]}
-    tf = T.Compose([T.Resize((imgsz, imgsz)), T.ToTensor()])
+    Hs, Ws = size_hw
+    to_t = T.ToTensor()
+
+    def preprocess(im):
+        # returns (tensor CHW, orig_target_size [w,h] to feed postprocessor)
+        if pre == "square":
+            return to_t(im.resize((Ws, Hs))), [im.width, im.height]
+        # letterbox: 긴 변→목표, 우하단 pad. 정규화 좌표×캔버스(원본 스케일) = 원본 px
+        r = min(Ws / im.width, Hs / im.height)
+        nw, nh = round(im.width * r), round(im.height * r)
+        canvas = Image.new("RGB", (Ws, Hs))
+        canvas.paste(im.resize((nw, nh)), (0, 0))
+        return to_t(canvas), [round(Ws / r), round(Hs / r)]
+
     files = sorted(p for p in img_dir.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png"})
 
     coco_dets = []
@@ -78,14 +91,16 @@ def eval_split(model, post, split, imgsz, device, conf, iou_match, batch=16):
     tp = fp = 0
     for i in range(0, len(files), batch):
         chunk = files[i:i + batch]
-        ims, sizes, metas = [], [], []
+        ims, sizes, post_sizes, metas = [], [], [], []
         for p in chunk:
             im = Image.open(p).convert("RGB")
             sizes.append([im.width, im.height])
-            ims.append(tf(im))
+            t, ps = preprocess(im)
+            ims.append(t)
+            post_sizes.append(ps)
             metas.append(p)
         x = torch.stack(ims).to(device)
-        orig = torch.tensor(sizes, dtype=torch.int64, device=device)
+        orig = torch.tensor(post_sizes, dtype=torch.int64, device=device)
         labels, boxes, scores = post(model(x), orig)
         for j, p in enumerate(metas):
             W, H = sizes[j]
@@ -153,18 +168,22 @@ def main():
     ap.add_argument("--config", required=True)
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--imgsz", type=int, default=640)
+    ap.add_argument("--rect", type=int, nargs=2, metavar=("H", "W"),
+                    help="직사각 입력(예: 736 1280). 지정 시 --imgsz 무시")
+    ap.add_argument("--pre", choices=["square", "letterbox"], default="square")
     ap.add_argument("--conf", type=float, default=0.25)
     ap.add_argument("--iou-match", type=float, default=0.5)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--out", default="reports/dfine_eval")
     a = ap.parse_args()
 
-    model, post = load_model(a.dfine_root, a.config, a.ckpt, a.imgsz, a.device)
+    size_hw = tuple(a.rect) if a.rect else (a.imgsz, a.imgsz)
+    model, post = load_model(a.dfine_root, a.config, a.ckpt, size_hw, a.device)
     result = {}
     for split in SPLITS:
-        result[split] = eval_split(model, post, split, a.imgsz, a.device, a.conf, a.iou_match)
+        result[split] = eval_split(model, post, split, size_hw, a.device, a.conf, a.iou_match, pre=a.pre)
         print(split, json.dumps(result[split], indent=1))
-    meta = dict(ckpt=a.ckpt, imgsz=a.imgsz, conf=a.conf, iou_match=a.iou_match,
+    meta = dict(ckpt=a.ckpt, size_hw=list(size_hw), pre=a.pre, conf=a.conf, iou_match=a.iou_match,
                 note="AP=COCO eval(faster-coco-eval) — ultralytics val()과 산출기 다름")
     Path(a.out + ".json").write_text(json.dumps(dict(meta=meta, **result), indent=2))
     print("saved", a.out + ".json")
