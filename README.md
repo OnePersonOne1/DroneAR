@@ -359,6 +359,15 @@ python scripts/train.py
 - 학습: merged · 640 · P2 없음 · seed 0 · COCO ckpt tuning · 220ep(스톡) · batch 32(lr 비례 0.0002). yolo26n C/D행과 동일 선상(테스트셋·imgsz·pretrained 동일). 릴리스 = ep191 EMA(`weights/dfine_n_drone_640_mergedataset_220epoch.pth`).
 - 재현: `scripts/yolo2coco.py` → `configs/dfine/` → D-FINE `train.py` → `scripts/dfine_eval.py` (원시 결과 `reports/dfine_n_eval.json`).
 
+**연산량·속도 스펙 (640, 실측)**:
+
+| 모델 | Params | GFLOPs | 4090 FP32 | i9 CPU t4 | ML2 CPU |
+|---|---:|---:|---:|---:|---:|
+| yolo26n | 2.5M | 5.8 | 2.3ms (433FPS) | 13.2ms (76FPS) | ~15 FPS 실측 |
+| D-FINE-N | 3.7M | 7.1 | 4.3ms (235FPS) | 26.0ms (39FPS) | ~7–9 FPS 추정 |
+
+- GFLOPs는 **1.2×**인데 CPU 지연은 **2×** — FLOPs가 아니라 **커널 효율**(deformable attention·LayerNorm의 CPU 비친화) 차이. (산출: yolo=ultralytics profile, D-FINE=calflops — 동일 MACs×2 관례.)
+
 **정확도 (held-out test)** — far/FP = [동일 greedy 프로토콜](reports/ablation_matrix.md)(conf 0.25·IoU 0.5) 직접 비교 가능. *AP는 산출기 상이(D-FINE=COCO eval, yolo=ultralytics) → 참고 비교*:
 
 | 모델 (640) | DUT AP50/AP50-95* | DUT far | DUT <8px | Maci AP50/AP50-95* | Maci far | FP/img(DUT·Maci) |
