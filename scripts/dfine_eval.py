@@ -53,7 +53,11 @@ def load_model(dfine_root, config, ckpt, imgsz, device):
     model = cfg.model
     state = torch.load(ckpt, map_location="cpu", weights_only=False)
     weights = state["ema"]["module"] if "ema" in state else state["model"]
-    model.load_state_dict(weights)
+    # eval_spatial_size 의존 프리컴퓨트 버퍼는 새 해상도용(모델 생성값) 유지
+    for k in ["decoder.anchors", "decoder.valid_mask"]:
+        weights.pop(k, None)
+    missing, unexpected = model.load_state_dict(weights, strict=False)
+    assert not unexpected and all(k.startswith("decoder.") for k in missing), (missing, unexpected)
     model = model.deploy().to(device)
     post = cfg.postprocessor.deploy().to(device)
     model.eval()
