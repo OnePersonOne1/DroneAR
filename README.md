@@ -422,6 +422,8 @@ python scripts/train.py
 
 ## 추론 입력(화질) 설정 가이드 — 계열별 양상
 
+> **추론 imgsz ↑ : yolo26 = 이득(+far 0.876→0.944), D-FINE = 마이너스(−far 0.944→0.369)** — 정반대.
+
 두 계열의 입력 화질 반응이 **정반대** → 추론 입력은 모델별 규칙으로 고정한다.
 실측 근거: yolo `reports/far_drone_p2_960.md` · D-FINE `reports/dfine_n_eval_{960,1280,letterbox,rect736x1280}.json`.
 
