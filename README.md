@@ -374,15 +374,17 @@ python scripts/train.py
 
 - GFLOPs는 **1.2×**인데 CPU 지연은 **2×** — FLOPs가 아니라 커널 효율(deformable attention·LayerNorm의 CPU 비친화) 차이로 인한 것으로 추정. (산출: yolo=ultralytics profile, D-FINE=calflops — 동일 MACs×2 관례.)
 
-**정확도 (held-out test)** — far/FP = [동일 greedy 프로토콜](reports/ablation_matrix.md)(conf 0.25·IoU 0.5) 직접 비교 가능. *AP는 산출기 상이(D-FINE=COCO eval, yolo=ultralytics) → 참고 비교*:
+**정확도 (held-out test) — AP는 전부 COCO eval로 통일**(`annotations/*.json`·faster-coco-eval, 출판 표준). yolo·D-FINE를 같은 평가기로 재 직접 비교 가능. far/FP = [동일 greedy 프로토콜](reports/ablation_matrix.md)(conf 0.25·IoU 0.5). ※ 상단 성능표·Ablation(A~I)은 ultralytics val 기준이라 동일 모델이 표 간 ~0.5pt 차이(평가기 관례, 실측):
 
-| 모델 (640) | DUT AP50/AP50-95* | DUT far | DUT <8px | Maci AP50/AP50-95* | Maci far | FP/img(DUT·Maci) |
+| 모델 (640) | DUT AP50/AP50-95 | DUT far | DUT <8px | Maci AP50/AP50-95 | Maci far | FP/img(DUT·Maci) |
 |---|---|---:|---:|---|---:|---|
-| yolo26n 100ep (C) | 0.927 / 0.619 | 0.820 | — | **0.891** / 0.445 | 0.783 | 0.06 · 0.05 |
-| yolo26n 300ep (D) | 0.950 / 0.650 | 0.876 | 0.706 | 0.858 / 0.415 | 0.748 | 0.04 · 0.07 |
-| **D-FINE-N 220ep** | 0.951 / **0.705*** | **0.944** | **0.941** | 0.866 / 0.428* | **0.818** | 0.08 · 0.20 |
+| yolo26n 100ep (C) | 0.922 / 0.623 | 0.820 | — | **0.893** / **0.460** | 0.783 | 0.06 · 0.05 |
+| yolo26n 300ep (D) | 0.944 / 0.647 | 0.876 | 0.706 | 0.854 / 0.427 | 0.748 | 0.04 · 0.07 |
+| **D-FINE-N 220ep** | **0.951** / **0.705** | **0.944** | **0.941** | 0.866 / 0.428 | **0.818** | 0.08 · 0.20 |
 
 ![dfine vs yolo26n curves](reports/dfine_n_vs_yolo26n_curves.png)
+
+> 위 곡선은 epoch별 DUT-val 학습 추세(D-FINE=COCO eval·yolo=ultralytics val, 평가기 상이) — **절대 높이 직접 비교 말고 추세만** 볼 것. 최종 정확도 비교는 위 COCO 통일 표.
 
 - **far-recall(동일 프로토콜): DUT +6.8pt(vs D)·Maciullo +3.5pt(vs C)** — 640·P2 없이 yolo26n-P2@960(E: 0.933)급 far. query 방식인 DETR 계열의 small object detection 강점 확인.
 
