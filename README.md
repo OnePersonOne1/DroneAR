@@ -383,6 +383,17 @@ python scripts/train.py
 
 - **far-recall(동일 프로토콜): DUT +6.8pt(vs D)·Maciullo +3.5pt(vs C)** — 640·P2 없이 yolo26n-P2@960(E: 0.933)급 far. query 방식인 DETR 계열의 small object detection 강점 확인.
 
+**정성 예시 — D-FINE 검출 / yolo26n 완전 미검출 (극소형)**:
+
+동일 조건(640·conf 0.25). 박스: **🟢GT · 🔵D-FINE 검출**(YOLO 박스 없음 = 미검출). 우상단 = 4× 확대 인셋.
+
+| ![win1](reports/dfine_win_examples/win_dut_00831.jpg) | ![win2](reports/dfine_win_examples/win_dut_00921.jpg) | ![win3](reports/dfine_win_examples/win_maciullo_001490.jpg) |
+|:---:|:---:|:---:|
+| DUT · 19×8px · **conf 0.83** · 지붕 배경 | DUT · 26×8px · **conf 0.76** · 건물 경계선 | Maciullo · 7×6px · **conf 0.71** · 하늘 배경 |
+
+- 3건 모두 side<8px(극원거리 꼬리) · yolo26n-300ep는 IoU<0.1(박스 자체 없음). 전수 후보 126건: `reports/dfine_wins_yolo_misses/`(로컬).
+- 강점 위치: 배경 clutter(지붕·경계선) 위 극소형 — query가 P2·고해상도 없이 포착.
+
 **구성·입력 특이점 비교**:
 
 | 항목 | yolo26n (C/D) | yolo26{n,l}-P2 (E~I) | D-FINE-N |
