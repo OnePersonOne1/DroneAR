@@ -101,6 +101,7 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 ## Ablation
 
 구성별 기여 분해 — yolo26n(A–F) · **yolo26l(H·I)**, seed 0, 파이프라인 동일. 미측정 = "—".
+AP는 **ultralytics val 평가 알고리즘** 기준(PR 곡선 면적 계산이 COCO eval과 미세 차 ~0.5pt).
 
 > **far 기준** = 픽셀 크기: GT 한 변 환산 `sqrt(w·h)×640` **< 16px**인 객체의 recall.
 > **<8px** = far에서 극원거리, 최난이도 꼬리.
