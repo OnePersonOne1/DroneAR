@@ -446,13 +446,13 @@ python scripts/train.py
 - **2-스테이지**: `stop_epoch 108` — ep0–107(stg1, 강증강) → ep108–119(stg2, 증강 off·EMA restart). **release = `best_stg2.pth`**(stg2 최고점), 비교용 `best_stg1.pth` 병존.
 - **추론**: DETR 계열 스케일 특화로 **960 고정**(1280 상향은 붕괴 — [위 D-FINE-N 분석](#추론-입력화질-설정-가이드--계열별-양상)과 동일 성질).
 
-**정확도 (merged-val · COCO eval · faster-coco-eval)** — best = **ep115 (stg2)**:
+**정확도 (DUT-val · COCO eval)** — best = **ep115 (stg2)**:
 
 | 지표 | AP@[.50:.95] | AP50 | AP75 | AP_s | AP_m | AP_l | AR@100 |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | **best_stg2** | **0.7346** | 0.9696 | 0.8442 | 0.6655 | 0.8078 | 0.8424 | 0.7969 |
 
-> ℹ️ 위 수치는 **merged-val**(학습 val 분할) 기준 — 상단 held-out test(DUT/Maciullo) 표와 **평가셋이 달라 직접 비교 불가**. yolo26l과의 정면 비교가 필요하면 `best_stg2.pth`에 `scripts/dfine_eval.py`(→ `reports/dfine_l960_eval.json`)를 test셋으로 실행(후속 과제).
+> ℹ️ 위 수치는 **DUT-val** COCO eval 기준 — 학습 검증 분할은 **DUT만**(Maciullo는 train에만 포함, `reports/merge_stats.json`). repo 상단 yolo·D-FINE-N 표는 held-out **test**(DUT-test·Maciullo-test)라 split·평가기(ultralytics vs faster-coco-eval)가 달라 직접 비교 불가. yolo26l과의 동일-조건 정면 비교는 `best_stg2.pth`에 `scripts/dfine_eval.py`(→ `reports/dfine_l960_eval.json`)를 test셋으로 실행 — **후속 과제**.
 
 - **산출물**: 학습 로그 `reports/dfine_l960_train_log.txt` (epoch별 COCO eval · best AP 포함).
 - **가중치 배포**: `best_stg2.pth` (477MB) — GitHub 100MB 한도 초과로 리포지토리 미포함. **Google Drive**: ⏳ 업로드 예정 <!-- DRIVE_LINK: 여기에 공유 링크 기재 -->. (참고: `best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`는 RunPod 볼륨 `/workspace/runs/merged_dfine_l_960/`에 보관.)
