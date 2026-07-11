@@ -280,14 +280,15 @@ Dockerfile · docker-compose.yml · requirements.txt
 
 | 모델 | imgsz | 릴리스 파일 | 크기 | 위치 / 다운로드 |
 |---|--:|---|--:|---|
-| **D-FINE-L** | 960 | `dfine_l_drone_960_mergedataset_120epoch.pth` | 477MB | **Drive 전용** <!-- DRIVE_LINK_DFINE_L: 여기에 공유 링크 --> ⏳ 업로드 예정 |
+| **D-FINE-L** | 960 | `dfine_l_drone_960_mergedataset_120epoch.pth` | 477MB | [⬇ Google Drive](https://drive.google.com/file/d/17xsaKm4ziOSl03LQ-OZxgvVmkIRsd6Qd/view?usp=sharing) (Drive 전용) |
 | D-FINE-N | 640 | `dfine_n_drone_640_mergedataset_220epoch.pth` | 58MB | repo `weights/d_fine/` |
 | yolo26l-P2 | 960 | `yolo26l_drone_960p2_mergedataset_100epoch.pt` | 50MB | repo `weights/yolo26/` |
 | yolo26n-P2 | 960 | `yolo26n_drone_960p2_mergedataset_100epoch.pt` | 5.9MB | repo `weights/yolo26/` |
 | yolo26n merged | 640 | `yolo26n_drone_640_mergedataset_{100,300}epoch.pt` (+onnx/ncnn) | ~5MB | repo `weights/yolo26/` |
 | yolo26{n,s} (old) | 640/960 | `yolo26{n,s}_drone_{640,960}.pt` (+onnx) | 5~20MB | repo `weights/yolo26/` |
 
-> D-FINE-L 보조 체크포인트(`best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`)는 학습 볼륨 `runs/merged_dfine_l_960/`에 보관(배포 제외). Drive 업로드·링크 공유 후 위 표의 `DRIVE_LINK_DFINE_L` 자리에 링크를 기입한다.
+> D-FINE-L 보조 체크포인트(`best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`)는 학습 볼륨 `runs/merged_dfine_l_960/`에 보관(배포 제외).
+> 다운로드 후 `weights/d_fine/dfine_l_drone_960_mergedataset_120epoch.pth`로 배치하면 평가·추론 경로와 일치한다.
 
 ---
 
