@@ -3,16 +3,14 @@
 > 🌐 English version: [README_English.md](README_English.md)
 
 **DUT-Anti-UAV**(+ **Maciullo DroneDetectionDataset** 병합, 학습 데이터 10×)로 **YOLO26** 드론(UAV)
-탐지 모델 학습 → **Magic Leap 2(ML2)** 배포용 export. 재현 가능한 end-to-end 파이프라인이다.
+탐지 모델 학습 → **Magic Leap 2(ML2)** 배포
 
 - **학습 환경:** RTX 4090 24GB / Linux / CUDA (학습 전용)
-- **추론 타깃:** ML2 — AMD "Mero" SoC (Zen2 쿼드코어 x86-64 CPU + RDNA2 iGPU), 16GB,
+- **추론 환경:** ML2 — AMD "Mero" SoC (Zen2 쿼드코어 x86-64 CPU + RDNA2 iGPU), 16GB,
   AOSP Android 10 (API 29). **NVIDIA 아님** → 디바이스 TensorRT/CUDA 불가.
   검증 경로: **ONNX → ONNX Runtime(+MLSDK C API), CPU 백엔드 XNNPACK.**
-- **모델 결정:** `yolo26n`(nano) 우선, **NMS-free one-to-one head 유지**, `imgsz=640`,
-  INT8/FP16 export.
+- **모델 결정: On-device: `yolo26n`(nano), INT8(CPU)/FP16(GPU) export, Cloud computing(RTX 4090): D-FINE l, fp16(예정)/fp32
 
-> 상태: 기본 파이프라인 완료 (데이터 → 학습 → 평가 → ML2 export → 벤치 → Docker 검증).
 > 확장: 데이터 병합(10×) · 960+P2 · 추론 1280 — [Ablation](#ablation) 참조.
 
 > GPU 경로 탐색: RDNA2 iGPU 추론용 **ncnn-Vulkan** 경로 검증은
@@ -22,9 +20,9 @@
 
 ## 성능 지표 (모델 선택 기준)
 
-### 정확도 — 마스터표 (전 모델 통일 평가, held-out test)
+### 정확도
 
-전 구성(yolo·D-FINE 10종)을 **동일 test·동일 평가기·동일 지표**로 재측정한 정확도 단일 출처(SoT)다.
+전 구성(yolo·D-FINE 총 10종)을 동일 test·동일 평가기·동일 지표로 측정했다.
 생성물: [`reports/master_table.md`](reports/master_table.md)(`scripts/build_master_table.py`) · 원자료 `reports/unified/*.json`.
 
 | 모델 | ref | train | imgsz | DUT AP50 | DUT AP50-95 | DUT far(<16px) | DUT <8px | DUT FP/img | Maci AP50 | Maci AP50-95 | Maci far(<16px) | Maci <8px | Maci FP/img |
@@ -42,20 +40,18 @@
 
 > 전 모델 **동일 조건**: held-out test(DUT-test 2200장·Maciullo-test 2625장) · **faster-coco-eval** ·
 > **conf 0.25 · IoU-match 0.5** · side@640 size-bin. far = <16px(=<8 + 8-16) recall.
-> **AP는 conf 0.25 운영점 필터 COCO** — ultralytics val(저conf 표준)과 산출기가 달라 old 표보다 낮게 측정되나
-> **전 모델 상호 직접 비교 가능**(이전 3종 혼재 표를 이 하나로 통일). `ref` = [Ablation](#ablation) 행(A~I). 전체 size-bin recall은 `reports/unified/<key>.json`.
 
 - **D-FINE-L이 전 도메인 최고**: DUT AP50 0.973·AP50-95 0.778, Maci AP50 0.907. far(<16px)도 DUT 0.987로 1위.
 - imgsz **960이 640 대비 DUT AP50-95 향상**(A→B +5.2pt) — 소형 객체 ~77%라 해상도 효과 큼. 단 추론 비용 ↑(입력 2.25배).
-- DUT-only(A·B·s) 모델은 **Maciullo 붕괴**(AP50 0.49~0.53) = 도메인 병합 없이는 이전 불가. 구성별 기여 분해: [Ablation](#ablation). 추론 예시: [Demo](#demo-추론-예시).
+- DUT-only(A·B·s) 모델은 Maciullo 데이터셋(더 큰 데이터셋)에서 붕괴(AP50 0.49~0.53) = 도메인 병합 없이는 이전 불가. 구성별 기여 분해: [Ablation](#ablation). 추론 예시: [Demo](#demo-추론-예시).
 
-**정면 비교 차트** — 위 마스터표를 시각화(전 모델 동일 조건이라 막대 높이 직접 비교 가능). 재생성: `python scripts/plot_master_compare.py`.
+**정면 비교 차트** — 위 표를 시각화. 재생성: `python scripts/plot_master_compare.py`.
 
 ![master comparison](reports/master_compare.png)
 
 - DUT-only 4모델(상단)은 **Maciullo(주황) 붕괴**, merged 모델은 두 도메인 균형. **D-FINE-L이 AP50·AP50-95·far 전부 최상위**. yolo26l-P2·D-FINE-N이 그 뒤.
 
-**모델 복잡도** (하드웨어 독립):
+**모델 복잡도**:
 
 | 모델 | imgsz | Params(M) | FLOPs(G) | best.pt |
 |------|------:|---------:|--------:|--------:|
@@ -67,11 +63,11 @@
 > **FLOPs(G)**: 각 행 imgsz 기준, ultralytics fused, **2×MAC 관례**(곱·합 각 1회 = MACs×2), 정밀도 무관.
 > FLOPs ∝ 입력 픽셀 → 960은 640의 약 2.25배. D-FINE 복잡도는 [DETR 절 스펙표](#detr-계열-1차--d-fine-n640-결과).
 
-### 추론 속도 — 전 모델 통일 벤치 (yolo · D-FINE, 재측정)
+### 추론 속도 — 전 모델 통일 벤치마크 테스트
 
-환경 변경(CPU i9-13900K → **Ryzen 9 7950X**) 대응 + **D-FINE 포함 공정 비교**를 위해 전 모델을 **동일 harness**로 재측정
+**CPU**: Ryzen 9 7950X
 (`scripts/bench_unified_latency.py` → `reports/unified_latency.json`). **순수 forward**(전·후처리·NMS 제외, torch),
-batch 1, **각 모델 배포 imgsz**. GPU=`cuda.Event`(warmup20/iter100), CPU=wall-clock(warmup3/iter12).
+batch 1, 각 모델 배포 imgsz. GPU=`cuda.Event`(warmup20/iter100), CPU=wall-clock(warmup3/iter12).
 
 각 셀 = `ms · FPS`. **정밀도 fp32 통일**(전 모델 동일) — fp16은 계열별 배포 스택이 달라(yolo=ONNX/TensorRT half, D-FINE=TensorRT fp16+`grid_sample` 플러그인) **공정 비교 불가**라 제외.¹
 
@@ -83,10 +79,11 @@ batch 1, **각 모델 배포 imgsz**. GPU=`cuda.Event`(warmup20/iter100), CPU=wa
 | D-FINE-N (merged) | 640 | 5.14 · 195 | 112 · 9.0 | 42 · 24.1 |
 | D-FINE-L (merged) | 960 | 11.96 · 84 | 1647 · 0.61 | 480 · 2.1 |
 
-¹ 참고: torch에서 yolo `.half()`는 640 미포화로 무이득·960 l-P2만 이득(113→163 FPS), D-FINE는 autocast fp16이 grid_sample fp32 유지+캐스팅 오버헤드로 fp32보다 느림 → **실 fp16 가속은 TensorRT 엔진 필요**(이 환경 미설치). yolo 계열 fp16 상세는 [아래 GPU 표](#추론-속도--gpu-rtx-4090-yolo-상세).
+¹ 참고: torch에서 yolo `.half()`는 640 미포화로 무이득·960 l-P2만 이득(113→163 FPS), D-FINE는 autocast fp16이 grid_sample fp32 유지+캐스팅 오버헤드로 fp32보다 느림 → **실 fp16 가속은 TensorRT 엔진 필요**(예정). yolo 계열 fp16 상세는 [아래 GPU 표](#추론-속도--gpu-rtx-4090-yolo-상세).
 
-- **GPU**: yolo26n 최속(340 FPS). **D-FINE-N이 195 FPS로 GPU 효율 우수**(deformable attn에도 yolo26l-P2 113 FPS보다 빠름). **D-FINE-L**은 정확도 최고지만 84 FPS — 클라우드 전용.
-- **CPU**: **D-FINE-N(8스레드 24 FPS)이 yolo26s(17 FPS)보다 빠름**(N은 640·소형). 반면 960 모델(yolo26l-P2·D-FINE-L)은 CPU ~2 FPS → **GPU 전용**. (CPU 8스레드는 스레드 경합으로 run별 변동 있음.)
+- **GPU**: yolo26n 가장 빠름(340 FPS). **D-FINE-N이 195 FPS로 GPU 효율 우수**(deformable attn에도 yolo26l-P2 113 FPS보다 빠름). **D-FINE-L**은 정확도 최고지만 84 FPS(@ RTX4090) — 따라서 클라우드 전용.
+- **CPU**: **D-FINE-N(8스레드 24 FPS)이 yolo26s(17 FPS)보다 빠름**(N은 640·소형). 반면 960 모델(yolo26l-P2·D-FINE-L)은 CPU ~2 FPS → **GPU 유리**.
+- ML2에서는 GPU(display 출력에 사용 중)보다 여유로운 CPU가 더 빠른 것으로 측정됨.
 - ⚠️ 이 표는 **torch 순수 forward** — ONNX Runtime 최적화 배포 수치는 아래 **CPU (ORT)** 표(yolo, INT8 포함, 별도 측정)와 다르다(ORT가 더 빠름).
 
 **정확도-속도 트레이드오프** (재생성 `python scripts/plot_ap_latency.py`):
@@ -109,7 +106,7 @@ torch CUDA(`cuda.Event` 계측), FPS = 1000/mean. 측정 하드웨어 **NVIDIA R
 | yolo26s | FP32 | 2.44 ± 0.14 | 410 |
 | yolo26s | FP16 | 2.57 ± 0.08 | 389 |
 
-- batch=1·작은 모델은 RTX 4090을 포화시키지 못해 커널 실행·메모리 대역폭에 묶임(GPU 미포화) → 모델·정밀도 간 지연 차이가 작다.
+- batch=1·작은 모델은 RTX 4090을 포화시키지 못해 커널 실행·메모리 대역폭에 묶임(GPU 미포화) → 모델·정밀도 간 지연 차이가 상대적으로 작다.
 
 **정밀도별 GPU 적합성** (산출물은 모두 ONNX):
 
@@ -198,7 +195,7 @@ AP·far·FP는 전부 **마스터표와 동일한 COCO 평가**(held-out test·f
 
 ### Maciullo 라벨 감사 — AP50 ~0.9 천장 원인
 
-전 구성에서 Maciullo AP50이 정체(COCO 기준 yolo 0.79~0.85·D-FINE-N 0.865·**최고 D-FINE-L 0.907**) → l-P2 오답 전수 시각화(FN 406·FP 146) 후
+전 구성에서 Maciullo AP50이 정체(COCO 기준 yolo 0.79~0.85·D-FINE-N 0.865·**최고 D-FINE-L 0.907**) → l-P2 오답 시각화(FN 406·FP 146) 후
 육안 판정(2026-07-08). **FP의 68%가 conf≥0.5** — 확인 결과 상위 케이스 다수는 **GT 박스 품질 문제**로,
 모델이 맞게 탐지해도 IoU<0.5가 되어 FP+FN 이중 감점 → AP 천장 형성. 색: 초록=GT, 빨강=FP 예측.
 
