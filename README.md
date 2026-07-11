@@ -354,10 +354,10 @@ python scripts/train.py
 ## 개선 로드맵 (소형·원거리)
 
 > **배포 방침**: **온디바이스(ML2) = yolo26n** (ncnn-Vulkan GPU 경로·속도), **클라우드 = D-FINE-L**
-> (query 기반 원거리 강점, L@960 학습 예정). D-FINE은 ncnn-Vulkan 이식 불가라 ML2 주력은 yolo26n 유지.
+> (query 기반 원거리 강점, L@960 학습 완료). D-FINE은 ncnn-Vulkan 이식 불가라 ML2 주력은 yolo26n 유지.
 
-- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(더 큰 모델, 클라우드용) · **D-FINE-N@640**(DETR류) → [Ablation](#ablation)
-- 진행 🔄: **D-FINE-L@960** (RunPod 4×4090, yolo26l-P2 레시피 동등 비교) → 이후 temporal(detect-then-track) 후순위
+- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(더 큰 모델, 클라우드용) · **D-FINE-N@640**(DETR류) · **D-FINE-L@960**(클라우드 주력) → [Ablation](#ablation) · [D-FINE-L 결과](#detr-계열-2차--d-fine-l960-결과)
+- 진행 🔄: temporal(detect-then-track) 후순위 검토
 - 보류: hard-negative(NEG_DIR) — Maciullo all-positive라 배경 FP 감소엔 별도 negative 셋 필요
 
 ### DETR 계열 1차 — D-FINE-N@640 결과
@@ -420,7 +420,7 @@ python scripts/train.py
 | 960 | 0.819 / 0.722 / 0.552 | 0.96 | 0.858 / 0.793 / 0.727 | 0.98 |
 | 1280 | 0.598 / 0.369 / 0.162 | 2.09 | 0.715 / 0.495 / 0.273 | 2.59 |
 
-- **YOLO와 정반대**: pos-emb 재생성에도 붕괴 — 쿼리·anchor가 학습 스케일 특화. 붕괴 속도는 도메인별(DUT 초소형은 960부터, Maciullo 중대형은 1280부터) = 학습 픽셀 스케일 이탈량에 비례. **"960 학습+1280 추론" 레시피는 DETR 계열 이식 불가** → D-FINE-L@960(학습 예정, 미완)은 **추론 960 고정** 전제, 1280은 검증만.
+- **YOLO와 정반대**: pos-emb 재생성에도 붕괴 — 쿼리·anchor가 학습 스케일 특화. 붕괴 속도는 도메인별(DUT 초소형은 960부터, Maciullo 중대형은 1280부터) = 학습 픽셀 스케일 이탈량에 비례. **"960 학습+1280 추론" 레시피는 DETR 계열 이식 불가** → D-FINE-L@960(학습 완료, [아래](#detr-계열-2차--d-fine-l960-결과))은 **추론 960 고정** 전제, 1280은 검증만.
 - 역설: 스트라이드 16/32뿐인데 far 0.944 — DETR의 small object detection 강점: Grid cell을 사용하는 CNN 방식과 달리 query 방식을 사용하므로 small object detection에 상대적으로 강함.
 - 트레이드오프: **FP/img 높음**(Maciullo 0.20 vs 0.05~0.07) — conf 스윕/라벨 노이즈 감안 필요. Maciullo AP50은 0.89 천장(라벨 품질로 인한)과 거의 동급.
 - 배포: CPU ~1.7–2× 느림(i9 threads=4 26.0ms vs 13.2ms) · **ncnn-Vulkan 이식 불가**(grid_sample) → **온디바이스 주력은 yolo26n 유지 권장**, D-FINE은 클라우드로.
@@ -437,6 +437,27 @@ python scripts/train.py
 ![dfine ml2 tradeoff](reports/dfine_n_ml2_tradeoff.png)
 
 - trade-off: **far +6.8pt ↔ fps 1/2**.
+
+### DETR 계열 2차 — D-FINE-L@960 결과
+
+클라우드 주력 모델. D-FINE-N(온디바이스 검토용)에서 **모델 스케일 상향(N 3.7M → L 30.7M)** + **학습 해상도 960**으로, yolo26l-P2@960(H·I행)과 동일 선상 비교를 겨냥.
+
+- **학습**: merged_drone · **960** · seed 0 · COCO ckpt tuning · **120ep** · **3×RTX4090, total_batch 24** · 학습 시간 **2일 4시간**. 설정 `configs/dfine/`·`dfine_l960_3gpu_pod.yml`, 재현 절차 `HANDOFF.md`.
+- **2-스테이지**: `stop_epoch 108` — ep0–107(stg1, 강증강) → ep108–119(stg2, 증강 off·EMA restart). **release = `best_stg2.pth`**(stg2 최고점), 비교용 `best_stg1.pth` 병존.
+- **추론**: DETR 계열 스케일 특화로 **960 고정**(1280 상향은 붕괴 — [위 D-FINE-N 분석](#추론-입력화질-설정-가이드--계열별-양상)과 동일 성질).
+
+**정확도 (merged-val · COCO eval · faster-coco-eval)** — best = **ep115 (stg2)**:
+
+| 지표 | AP@[.50:.95] | AP50 | AP75 | AP_s | AP_m | AP_l | AR@100 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **best_stg2** | **0.7346** | 0.9696 | 0.8442 | 0.6655 | 0.8078 | 0.8424 | 0.7969 |
+
+![dfine-l960 curves](reports/dfine_l960_curves.png)
+
+> ⚠️ **평가셋 주의**: 위 수치·그래프의 D-FINE-L은 **merged-val**(학습 val 분할) COCO eval이고, yolo26l-P2(H·I)·D-FINE-N 표는 **held-out test**(DUT/Maciullo)라 **평가셋이 다름 → 절대 높이 직접 비교 불가**(우측 패널은 참고 위치만). yolo26l과의 동일-test 정면 비교는 `best_stg2.pth`에 `scripts/dfine_eval.py`(→ `reports/dfine_l960_eval.json`)를 돌려야 하며, 이는 **후속 과제**로 남김.
+
+- **산출물**: metric `reports/dfine_l960_metrics.json`(+`.md` epoch별 표) · 학습 로그 `reports/dfine_l960_train_log.txt`(epoch별 COCO eval) · 곡선 `reports/dfine_l960_curves.png` · 곡선 생성 `scripts/plot_dfine_l_curves.py`.
+- **가중치 배포**: `best_stg2.pth` (477MB) — GitHub 100MB 한도 초과로 리포지토리 미포함. **Google Drive**: ⏳ 업로드 예정 <!-- DRIVE_LINK: 여기에 공유 링크 기재 -->. (참고: `best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`는 RunPod 볼륨 `/workspace/runs/merged_dfine_l_960/`에 보관.)
 
 ---
 
