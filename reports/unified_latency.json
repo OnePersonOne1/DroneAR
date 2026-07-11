@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "cpu": "x86_64",
+    "note": "순수 forward(전·후처리 제외), batch=1, 각 모델 배포 imgsz. GPU=cuda.Event(warmup20/iter100), CPU=wall-clock(warmup3/iter12)."
+  },
+  "yolo26n_m300": {
+    "name": "yolo26n (merged)",
+    "family": "yolo",
+    "imgsz": 640,
+    "gpu_fp32": {
+      "ms": 2.971,
+      "std": 0.048,
+      "fps": 336.6
+    },
+    "gpu_fp16": {
+      "ms": 3.169,
+      "std": 0.039,
+      "fps": 315.5
+    },
+    "cpu_t1": {
+      "ms": 62.26,
+      "std": 0.64,
+      "fps": 16.06
+    },
+    "cpu_t8": {
+      "ms": 22.24,
+      "std": 7.66,
+      "fps": 44.97
+    }
+  },
+  "yolo26s_640": {
+    "name": "yolo26s",
+    "family": "yolo",
+    "imgsz": 640,
+    "gpu_fp32": {
+      "ms": 3.084,
+      "std": 0.062,
+      "fps": 324.3
+    },
+    "gpu_fp16": {
+      "ms": 3.198,
+      "std": 0.043,
+      "fps": 312.7
+    },
+    "cpu_t1": {
+      "ms": 170.58,
+      "std": 1.83,
+      "fps": 5.86
+    },
+    "cpu_t8": {
+      "ms": 60.86,
+      "std": 10.54,
+      "fps": 16.43
+    }
+  },
+  "yolo26lP2": {
+    "name": "yolo26l-P2 (merged)",
+    "family": "yolo",
+    "imgsz": 960,
+    "gpu_fp32": {
+      "ms": 8.802,
+      "std": 0.092,
+      "fps": 113.6
+    },
+    "gpu_fp16": {
+      "ms": 6.191,
+      "std": 0.073,
+      "fps": 161.5
+    },
+    "cpu_t1": {
+      "ms": 2235.4,
+      "std": 19.24,
+      "fps": 0.45
+    },
+    "cpu_t8": {
+      "ms": 602.69,
+      "std": 4.45,
+      "fps": 1.66
+    }
+  },
+  "dfine_n": {
+    "name": "D-FINE-N (merged)",
+    "family": "dfine",
+    "imgsz": 640,
+    "gpu_fp32": {
+      "ms": 6.781,
+      "std": 0.056,
+      "fps": 147.5
+    },
+    "gpu_fp16": {
+      "error": "expected mat1 and mat2 to have the same dtype, but got: float != c10::Half"
+    },
+    "cpu_t1": {
+      "ms": 106.54,
+      "std": 0.54,
+      "fps": 9.39
+    },
+    "cpu_t8": {
+      "ms": 36.78,
+      "std": 9.54,
+      "fps": 27.19
+    }
+  },
+  "dfine_l": {
+    "name": "D-FINE-L (merged)",
+    "family": "dfine",
+    "imgsz": 960,
+    "gpu_fp32": {
+      "ms": 11.974,
+      "std": 0.146,
+      "fps": 83.5
+    },
+    "gpu_fp16": {
+      "error": "expected mat1 and mat2 to have the same dtype, but got: float != c10::Half"
+    },
+    "cpu_t1": {
+      "ms": 1641.75,
+      "std": 3.17,
+      "fps": 0.61
+    },
+    "cpu_t8": {
+      "ms": 496.72,
+      "std": 11.61,
+      "fps": 2.01
+    }
+  }
+}

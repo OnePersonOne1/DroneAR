@@ -67,7 +67,36 @@
 > **FLOPs(G)**: 각 행 imgsz 기준, ultralytics fused, **2×MAC 관례**(곱·합 각 1회 = MACs×2), 정밀도 무관.
 > FLOPs ∝ 입력 픽셀 → 960은 640의 약 2.25배. D-FINE 복잡도는 [DETR 절 스펙표](#detr-계열-1차--d-fine-n640-결과).
 
-### 추론 속도 — GPU (RTX 4090)
+### 추론 속도 — 전 모델 통일 벤치 (yolo · D-FINE, 재측정)
+
+환경 변경(CPU i9-13900K → **Ryzen 9 7950X**) 대응 + **D-FINE 포함 공정 비교**를 위해 전 모델을 **동일 harness**로 재측정
+(`scripts/bench_unified_latency.py` → `reports/unified_latency.json`). **순수 forward**(전·후처리·NMS 제외, torch),
+batch 1, **각 모델 배포 imgsz**. GPU=`cuda.Event`(warmup20/iter100), CPU=wall-clock(warmup3/iter12).
+
+| 모델 | imgsz | GPU fp32 (ms · FPS) | GPU fp16 | CPU 1스레드 (ms · FPS) | CPU 8스레드 (ms · FPS) |
+|---|--:|--:|--:|--:|--:|
+| yolo26n (merged) | 640 | 2.97 · **337** | 3.17 · 316 | 62 · 16.1 | 22 · **45.0** |
+| yolo26s | 640 | 3.08 · 324 | 3.20 · 313 | 171 · 5.9 | 61 · 16.4 |
+| yolo26l-P2 (merged) | 960 | 8.80 · 114 | 6.19 · 162 | 2235 · 0.45 | 603 · 1.7 |
+| D-FINE-N (merged) | 640 | 6.78 · 148 | — ¹ | 107 · 9.4 | 37 · 27.2 |
+| D-FINE-L (merged) | 960 | 11.97 · 84 | — ¹ | 1642 · 0.6 | 497 · 2.0 |
+
+¹ D-FINE fp16: `grid_sample`(deformable attn) half 미지원 → fp32만. ML2 이식도 같은 이유로 불가([아래](#추론-입력화질-설정-가이드--계열별-양상)).
+
+- **GPU**: yolo26n 최속(337 FPS). **D-FINE-L**이 정확도 최고지만 12ms(84 FPS) — 클라우드 전용. D-FINE-N은 148 FPS로 중간, yolo26l-P2(960·114 FPS)와 비슷대역.
+- **yolo fp16**: 640은 GPU 미포화라 **거의 무이득**(2.97→3.17ms, 오히려 소폭↑), 960 l-P2는 이득(8.80→6.19ms).
+- **CPU**: **D-FINE-N(8스레드 27 FPS)이 yolo26s(16 FPS)보다 빠름**(N은 640·소형). 반면 960 모델(yolo26l-P2·D-FINE-L)은 CPU에서 <2 FPS → **GPU 전용**.
+- ⚠️ 이 표는 **torch 순수 forward** — ONNX Runtime 최적화 배포 수치는 아래 **CPU (ORT)** 표(yolo, INT8 포함, 별도 측정)와 다르다(ORT가 더 빠름).
+
+**정확도-속도 트레이드오프** (재생성 `python scripts/plot_ap_latency.py`):
+
+![ap vs latency](reports/ap_latency.png)
+
+- 좌상단일수록 우수(높은 AP·낮은 지연). yolo26n = 최속·최경량, **D-FINE-L = 최고 AP**. D-FINE-N은 CPU 트레이드오프 양호.
+
+### 추론 속도 — GPU (RTX 4090), yolo 상세
+
+> 전 모델(D-FINE 포함) 교차 비교는 위 [통일 벤치](#추론-속도--전-모델-통일-벤치-yolo--d-fine-재측정). 아래는 yolo base 가중치 FP32/FP16 상세.
 
 config: imgsz=640, batch=1(single-stream), warmup=30, iters=200, **순수 forward(전·후처리·NMS 제외)**,
 torch CUDA(`cuda.Event` 계측), FPS = 1000/mean. 측정 하드웨어 **NVIDIA RTX 4090**. 원본 로그: `weights/latency_gpu.md`.
@@ -91,7 +120,9 @@ torch CUDA(`cuda.Event` 계측), FPS = 1000/mean. 측정 하드웨어 **NVIDIA R
 
 INT8 GPU 가속은 TensorRT 엔진 별도 빌드 필요.
 
-### 추론 속도 — CPU (i9-13900K, ONNX Runtime)
+### 추론 속도 — CPU (i9-13900K, ONNX Runtime) — yolo ORT 배포 상세
+
+> ⚠️ 이전 환경(i9-13900K) 측정 · **ONNX Runtime** 백엔드(위 통일 벤치는 Ryzen·torch forward라 별개). INT8·ML2 배포 관점 참고용.
 
 config: ORT **CPUExecutionProvider**, imgsz=640, batch=1, warmup=30, iters=200,
 `intra_op_num_threads`=1·4 (inter_op=1, sequential), FPS = 1000/mean. 측정 하드웨어
@@ -416,14 +447,14 @@ python scripts/train.py
 - 학습: merged · 640 · P2 없음 · seed 0 · COCO ckpt tuning · 220ep(스톡) · batch 32(lr 비례 0.0002). yolo26n C/D행과 동일 선상(테스트셋·imgsz·pretrained 동일). 릴리스 = ep191 EMA(`weights/d_fine/dfine_n_drone_640_mergedataset_220epoch.pth`).
 - 재현: `scripts/yolo2coco.py` → `configs/dfine/` → D-FINE `train.py` → `scripts/dfine_eval.py` (결과 `reports/dfine_n_eval.json`).
 
-**연산량·속도 스펙 (640, 실측)**:
+**연산량·속도 스펙 (640, 실측)** — 4090/CPU는 [통일 벤치](#추론-속도--전-모델-통일-벤치-yolo--d-fine-재측정)(torch forward, Ryzen) 값:
 
-| 모델 | Params | GFLOPs | 4090 FP32 | i9 CPU t4 | ML2 CPU |
+| 모델 | Params | GFLOPs | 4090 fp32 | Ryzen CPU t8 | ML2 CPU |
 |---|---:|---:|---:|---:|---:|
-| yolo26n | 2.5M | 5.8 | 2.3ms (433FPS) | 13.2ms (76FPS) | ~15 FPS 실측 |
-| D-FINE-N | 3.7M | 7.1 | 4.3ms (235FPS) | 26.0ms (39FPS) | ~7–9 FPS 추정 |
+| yolo26n | 2.5M | 5.8 | 2.97ms (337FPS) | 22ms (45FPS) | ~15 FPS 실측 |
+| D-FINE-N | 3.7M | 7.1 | 6.78ms (148FPS) | 37ms (27FPS) | ~7–9 FPS 추정 |
 
-- GFLOPs는 **1.2×**인데 CPU 지연은 **2×** — FLOPs가 아니라 커널 효율(deformable attention·LayerNorm의 CPU 비친화) 차이로 인한 것으로 추정. (산출: yolo=ultralytics profile, D-FINE=calflops — 동일 MACs×2 관례.)
+- GFLOPs는 **1.2×**인데 지연은 **4090 2.3× · CPU 1.7×** — FLOPs가 아니라 커널 효율(deformable attention·LayerNorm의 CPU/GPU 비친화) 차이로 인한 것으로 추정. (Params/GFLOPs 산출: yolo=ultralytics profile, D-FINE=calflops — 동일 MACs×2 관례.)
 
 **정확도 (held-out test)**: D-FINE-N·L 포함 전 모델 수치는 상단 [마스터표](#정확도--마스터표-전-모델-통일-평가-held-out-test)로 통일(held-out test·faster-coco-eval·conf 0.25·IoU 0.5). D-FINE-N 요약 — DUT **AP50 0.950 / AP50-95 0.706 · far 0.947 · <8px 0.941**(FP/img 0.08), Maci **0.865 / 0.423 · far 0.838 · <8px 0.636**(FP/img 0.19). yolo26n C/D와 동일 640·pretrained 선상, far·소형에서 우위(아래).
 
@@ -480,7 +511,7 @@ python scripts/train.py
 
 ![dfine ml2 tradeoff](reports/dfine_n_ml2_tradeoff.png)
 
-- trade-off: **far +6.8pt ↔ fps 1/2**.
+- trade-off: **far +7.1pt(vs yolo26n-D) ↔ fps ~1/2**(4090 337→148 FPS · CPU t8 45→27 FPS).
 
 ### DETR 계열 2차 — D-FINE-L@960 결과
 
