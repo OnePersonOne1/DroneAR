@@ -49,6 +49,12 @@
 - imgsz **960이 640 대비 DUT AP50-95 향상**(A→B +5.2pt) — 소형 객체 ~77%라 해상도 효과 큼. 단 추론 비용 ↑(입력 2.25배).
 - DUT-only(A·B·s) 모델은 **Maciullo 붕괴**(AP50 0.49~0.53) = 도메인 병합 없이는 이전 불가. 구성별 기여 분해: [Ablation](#ablation). 추론 예시: [Demo](#demo-추론-예시).
 
+**정면 비교 차트** — 위 마스터표를 시각화(전 모델 동일 조건이라 막대 높이 직접 비교 가능). 재생성: `python scripts/plot_master_compare.py`.
+
+![master comparison](reports/master_compare.png)
+
+- DUT-only 4모델(상단)은 **Maciullo(주황) 붕괴**, merged 모델은 두 도메인 균형. **D-FINE-L이 AP50·AP50-95·far 전부 최상위**. yolo26l-P2·D-FINE-N이 그 뒤.
+
 **모델 복잡도** (하드웨어 독립):
 
 | 모델 | imgsz | Params(M) | FLOPs(G) | best.pt |
