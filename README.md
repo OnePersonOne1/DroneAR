@@ -18,6 +18,24 @@
 
 ---
 
+## 가중치 다운로드
+
+`weights/`는 계열별로 **`weights/yolo26/`**(YOLO)·**`weights/d_fine/`**(D-FINE)로 분기. **<100MB 파일은 repo 포함**(clone 편의), **D-FINE-L `dfine_l_drone_960_mergedataset_120epoch.pth`(477MB)만 GitHub 100MB 한도 초과로 Drive 전용**.
+
+| 모델 | imgsz | 릴리스 파일 | 크기 | 위치 / 다운로드 |
+|---|--:|---|--:|---|
+| **D-FINE-L** | 960 | `dfine_l_drone_960_mergedataset_120epoch.pth` | 477MB | [⬇ Google Drive](https://drive.google.com/file/d/17xsaKm4ziOSl03LQ-OZxgvVmkIRsd6Qd/view?usp=sharing) (Drive 전용) |
+| D-FINE-N | 640 | `dfine_n_drone_640_mergedataset_220epoch.pth` | 58MB | repo `weights/d_fine/` |
+| yolo26l-P2 | 960 | `yolo26l_drone_960p2_mergedataset_100epoch.pt` | 50MB | repo `weights/yolo26/` |
+| yolo26n-P2 | 960 | `yolo26n_drone_960p2_mergedataset_100epoch.pt` | 5.9MB | repo `weights/yolo26/` |
+| yolo26n merged | 640 | `yolo26n_drone_640_mergedataset_{100,300}epoch.pt` (+onnx/ncnn) | ~5MB | repo `weights/yolo26/` |
+| yolo26{n,s} (old) | 640/960 | `yolo26{n,s}_drone_{640,960}.pt` (+onnx) | 5~20MB | repo `weights/yolo26/` |
+
+> D-FINE-L 보조 체크포인트(`best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`)는 학습 볼륨 `runs/merged_dfine_l_960/`에 보관(배포 제외).
+> 다운로드 후 `weights/d_fine/dfine_l_drone_960_mergedataset_120epoch.pth`로 배치하면 평가·추론 경로와 일치한다.
+
+---
+
 ## 성능 지표 (모델 선택 기준)
 
 ### 정확도
@@ -271,24 +289,6 @@ demo/      추론 예시 (DUT image0~9 + Maciullo ground0~3)
 Dockerfile · docker-compose.yml · requirements.txt
 ```
 
-### 가중치 다운로드
-
-`weights/`는 계열별로 **`weights/yolo26/`**(YOLO)·**`weights/d_fine/`**(D-FINE)로 분기. **<100MB 파일은 repo 포함**(clone 편의), **D-FINE-L `dfine_l_drone_960_mergedataset_120epoch.pth`(477MB)만 GitHub 100MB 한도 초과로 Drive 전용**.
-
-| 모델 | imgsz | 릴리스 파일 | 크기 | 위치 / 다운로드 |
-|---|--:|---|--:|---|
-| **D-FINE-L** | 960 | `dfine_l_drone_960_mergedataset_120epoch.pth` | 477MB | [⬇ Google Drive](https://drive.google.com/file/d/17xsaKm4ziOSl03LQ-OZxgvVmkIRsd6Qd/view?usp=sharing) (Drive 전용) |
-| D-FINE-N | 640 | `dfine_n_drone_640_mergedataset_220epoch.pth` | 58MB | repo `weights/d_fine/` |
-| yolo26l-P2 | 960 | `yolo26l_drone_960p2_mergedataset_100epoch.pt` | 50MB | repo `weights/yolo26/` |
-| yolo26n-P2 | 960 | `yolo26n_drone_960p2_mergedataset_100epoch.pt` | 5.9MB | repo `weights/yolo26/` |
-| yolo26n merged | 640 | `yolo26n_drone_640_mergedataset_{100,300}epoch.pt` (+onnx/ncnn) | ~5MB | repo `weights/yolo26/` |
-| yolo26{n,s} (old) | 640/960 | `yolo26{n,s}_drone_{640,960}.pt` (+onnx) | 5~20MB | repo `weights/yolo26/` |
-
-> D-FINE-L 보조 체크포인트(`best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`)는 학습 볼륨 `runs/merged_dfine_l_960/`에 보관(배포 제외).
-> 다운로드 후 `weights/d_fine/dfine_l_drone_960_mergedataset_120epoch.pth`로 배치하면 평가·추론 경로와 일치한다.
-
----
-
 ## 데이터셋
 
 **출처 (Sources)**
@@ -516,7 +516,7 @@ python scripts/train.py
 
 클라우드 주력 모델. D-FINE-N(온디바이스 검토용)에서 **모델 스케일 상향(N 3.7M → L 30.7M)** + **학습 해상도 960**.
 
-- **학습**: merged_drone · **960** · seed 0 · COCO ckpt tuning · **120ep** · **3×RTX4090, total_batch 24** · 학습 시간 **2일 4시간**. 설정 `configs/dfine/`·`dfine_l960_3gpu_pod.yml`, 재현 절차 `HANDOFF.md`.
+- **학습**: merged_drone · **960** · seed 0 · COCO ckpt tuning · **120ep** · **3×RTX4090, total_batch 24** · 학습 시간 **2일 4시간**. 설정 `configs/dfine/`·`dfine_l960_3gpu_pod.yml`.
 - **2-스테이지**: `stop_epoch 108` — ep0–107(stg1, 강증강) → ep108–119(stg2, 증강 off·EMA restart). **release = `best_stg2.pth`**(stg2 최고점 ep115) → 배포 파일명 `dfine_l_drone_960_mergedataset_120epoch.pth`, 비교용 `best_stg1.pth` 병존.
 - **추론**: DETR 계열 스케일 특화로 **960 고정**(1280 상향은 붕괴 — [위 D-FINE-N 분석](#추론-입력화질-설정-가이드--계열별-양상)과 동일 성질).
 
