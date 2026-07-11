@@ -67,7 +67,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python train.py \
 # 평가 (AP=COCO eval, far/FP=동일 greedy 프로토콜)
 cd /mnt/ssd_0/workspace/DroneAR
 python scripts/dfine_eval.py --config configs/dfine/custom/dfine_hgnetv2_n_merged_drone.yml \
-  --ckpt weights/dfine_n_drone_640_mergedataset_220epoch.pth --imgsz 640
+  --ckpt weights/d_fine/dfine_n_drone_640_mergedataset_220epoch.pth --imgsz 640
 ```
 - N: merged·640·batch 32·220ep. 릴리스 = **ep191 EMA**(best_stat은 EMA 미추적 → 로그 재분석 선택).
 - VRAM 팁: N batch 32(~10GB). L@960 batch 8(~17.6GB), batch 16 OOM.

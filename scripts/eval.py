@@ -2,7 +2,7 @@
 """Evaluate trained YOLO26 drone weights on the val and test splits; write metrics.json.
 
 Usage:
-    python scripts/eval.py --weights weights/yolo26n_drone_640.pt weights/yolo26s_drone_640.pt
+    python scripts/eval.py --weights weights/yolo26/yolo26n_drone_640.pt weights/yolo26/yolo26s_drone_640.pt
 """
 import argparse
 import json
@@ -13,7 +13,7 @@ from ultralytics import YOLO
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--weights", nargs="+", default=["weights/yolo26n_drone_640.pt"])
+    ap.add_argument("--weights", nargs="+", default=["weights/yolo26/yolo26n_drone_640.pt"])
     ap.add_argument("--data", default="configs/dut_drone.yaml")
     ap.add_argument("--imgsz", type=int, default=0,
                     help="0 = 모델명 끝 숫자에서 자동(yolo26n_drone_960 -> 960)")

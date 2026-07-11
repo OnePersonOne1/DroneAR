@@ -22,7 +22,7 @@ DUT+Maciullo 병합 가중치도 **동일 파이프라인**으로 배포된다(�
 
 ```bash
 ./dronedet_selftest ../../demo \
-  ../../weights/yolo26n_drone_640_mergedataset_300epoch_ncnn_model \
+  ../../weights/yolo26/yolo26n_drone_640_mergedataset_300epoch_ncnn_model \
   ../../weights/parity_ref_mergedataset_300epoch.csv
 ```
 
@@ -36,8 +36,8 @@ DUT+Maciullo 병합 가중치도 **동일 파이프라인**으로 배포된다(�
 
 ```bash
 .venv/bin/python -c "from ultralytics import YOLO; \
-  YOLO('weights/yolo26n_drone_640.pt').export(format='ncnn', half=True, imgsz=640, batch=1)"
-# -> weights/yolo26n_drone_640_ncnn_model/{model.ncnn.param, model.ncnn.bin}  (FP16)
+  YOLO('weights/yolo26/yolo26n_drone_640.pt').export(format='ncnn', half=True, imgsz=640, batch=1)"
+# -> weights/yolo26/yolo26n_drone_640_ncnn_model/{model.ncnn.param, model.ncnn.bin}  (FP16)
 ```
 
 - 출력 `out0 = (5, 8400)` = `[cx, cy, w, h, sigmoid_score]`, 640 letterbox-입력 좌표.

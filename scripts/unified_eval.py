@@ -12,7 +12,7 @@ imgsz는 모델 학습 해상도. 출력: reports/unified/<key>.json.
 usage:
   # yolo
   python scripts/unified_eval.py --family yolo --key yolo26lP2_960_m100 \
-    --weights weights/yolo26l_drone_960p2_mergedataset_100epoch.pt --imgsz 960
+    --weights weights/yolo26/yolo26l_drone_960p2_mergedataset_100epoch.pt --imgsz 960
   # dfine
   python scripts/unified_eval.py --family dfine --key dfine_l_960_m120 \
     --dfine-root /root/D-FINE --config configs/dfine/custom/dfine_l960_merged.yml \

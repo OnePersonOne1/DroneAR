@@ -112,21 +112,21 @@ git push origin main
 ## 할 일 2 — 전 모델 평가 실행 (모델 매트릭스)
 | model_key | family | weights | imgsz | 비고(ablation) |
 |---|---|---|---:|---|
-| yolo26n_640_dut | yolo | `weights/yolo26n_drone_640.pt` | 640 | A (old, DUT-only) |
-| yolo26n_960_dut | yolo | `weights/yolo26n_drone_960.pt` | 960 | B (DUT-only) |
-| yolo26s_640 | yolo | `weights/yolo26s_drone_640.pt` | 640 | — |
-| yolo26s_960 | yolo | `weights/yolo26s_drone_960.pt` | 960 | — |
-| yolo26n_640_m100 | yolo | `weights/yolo26n_drone_640_mergedataset_100epoch.pt` | 640 | **C** |
-| yolo26n_640_m300 | yolo | `weights/yolo26n_drone_640_mergedataset_300epoch.pt` | 640 | **D** |
-| yolo26nP2_960_m100 | yolo | `weights/yolo26n_drone_960p2_mergedataset_100epoch.pt` | 960 | **E/F** |
-| yolo26lP2_960_m100 | yolo | `weights/yolo26l_drone_960p2_mergedataset_100epoch.pt` | 960 | **H/I** |
-| dfine_n_640_m220 | dfine | `weights/dfine_n_drone_640_mergedataset_220epoch.pth` | 640 | D-FINE-N |
+| yolo26n_640_dut | yolo | `weights/yolo26/yolo26n_drone_640.pt` | 640 | A (old, DUT-only) |
+| yolo26n_960_dut | yolo | `weights/yolo26/yolo26n_drone_960.pt` | 960 | B (DUT-only) |
+| yolo26s_640 | yolo | `weights/yolo26/yolo26s_drone_640.pt` | 640 | — |
+| yolo26s_960 | yolo | `weights/yolo26/yolo26s_drone_960.pt` | 960 | — |
+| yolo26n_640_m100 | yolo | `weights/yolo26/yolo26n_drone_640_mergedataset_100epoch.pt` | 640 | **C** |
+| yolo26n_640_m300 | yolo | `weights/yolo26/yolo26n_drone_640_mergedataset_300epoch.pt` | 640 | **D** |
+| yolo26nP2_960_m100 | yolo | `weights/yolo26/yolo26n_drone_960p2_mergedataset_100epoch.pt` | 960 | **E/F** |
+| yolo26lP2_960_m100 | yolo | `weights/yolo26/yolo26l_drone_960p2_mergedataset_100epoch.pt` | 960 | **H/I** |
+| dfine_n_640_m220 | dfine | `weights/d_fine/dfine_n_drone_640_mergedataset_220epoch.pth` | 640 | D-FINE-N |
 | dfine_l_960_m120 | dfine | `runs/merged_dfine_l_960/best_stg2.pth` | 960 | **D-FINE-L (신규)** |
 
 ```bash
 # yolo (예)
 python scripts/unified_eval.py --family yolo --key yolo26lP2_960_m100 \
-  --weights weights/yolo26l_drone_960p2_mergedataset_100epoch.pt --imgsz 960
+  --weights weights/yolo26/yolo26l_drone_960p2_mergedataset_100epoch.pt --imgsz 960
 # dfine (예)
 python scripts/unified_eval.py --family dfine --key dfine_l_960_m120 \
   --dfine-root /root/D-FINE --config configs/dfine/custom/dfine_l960_merged.yml \

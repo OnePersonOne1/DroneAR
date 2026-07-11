@@ -115,7 +115,7 @@ def failure_modes(model, img_dir, lbl_dir, imgsz, device, conf, iou_match, small
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--old", default="weights/yolo26n_drone_640.pt")
+    ap.add_argument("--old", default="weights/yolo26/yolo26n_drone_640.pt")
     ap.add_argument("--new", default="runs/merged_yolo26n/weights/best.pt")
     ap.add_argument("--merged", default="/mnt/ssd_0/dataset/merged_drone")
     ap.add_argument("--imgsz", type=int, default=640)

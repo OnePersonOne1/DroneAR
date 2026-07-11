@@ -7,7 +7,7 @@ ML2 를 보유하지 않아서, 공개된 스펙을 바탕으로 작성하였다
 
 전제: `cpp/build-ml2` 에서 NDK(x86_64, API29, Vulkan)로 교차컴파일된
 `libdronedet.so` + `dronedet_selftest` 와 ncnn 모델
-`weights/yolo26n_drone_640_ncnn_model/` (param/bin), `weights/parity_ref.csv` 를 사용한다.
+`weights/yolo26/yolo26n_drone_640_ncnn_model/` (param/bin), `weights/parity_ref.csv` 를 사용한다.
 
 호스트(RTX 4090 Vulkan)에서 추론 정확성 + Vulkan 경로는 이미 검증됨.
 ML2에서 실증할 것은 두 가지: **(a) AOSP 빌드가 앱에 Vulkan compute queue 를 노출하는가, (b) RDNA2 실측 성능.**
@@ -24,7 +24,7 @@ ncnn-Vulkan 은 RDNA2 를 포함한 벤더 무관 Vulkan compute 로 동작한�
 
 ```bash
 adb push libdronedet.so dronedet_selftest /data/local/tmp/dronedet/
-adb push weights/yolo26n_drone_640_ncnn_model /data/local/tmp/dronedet/model
+adb push weights/yolo26/yolo26n_drone_640_ncnn_model /data/local/tmp/dronedet/model
 adb push weights/parity_ref.csv demo /data/local/tmp/dronedet/
 adb shell "cd /data/local/tmp/dronedet && LD_LIBRARY_PATH=. ./dronedet_selftest ./demo ./model ./parity_ref.csv"
 ```

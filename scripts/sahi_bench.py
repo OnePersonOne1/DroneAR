@@ -164,7 +164,7 @@ def evaluate(mode, model, imgs, lbl_dir, a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--weights", default="weights/yolo26n_drone_640_mergedataset_300epoch.pt")
+    ap.add_argument("--weights", default="weights/yolo26/yolo26n_drone_640_mergedataset_300epoch.pt")
     ap.add_argument("--img-dir", default="/mnt/ssd_0/dataset/merged_drone/images/test_dut")
     ap.add_argument("--lbl-dir", default="/mnt/ssd_0/dataset/merged_drone/labels/test_dut")
     ap.add_argument("--device", default="0")

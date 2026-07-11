@@ -24,7 +24,7 @@ from ultralytics import YOLO
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--weights", default="weights/yolo26n_drone_640.pt")
+    ap.add_argument("--weights", default="weights/yolo26/yolo26n_drone_640.pt")
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--opset", type=int, default=17)
     ap.add_argument("--outdir", default="weights")

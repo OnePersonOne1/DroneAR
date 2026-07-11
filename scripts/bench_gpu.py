@@ -19,7 +19,7 @@ from ultralytics import YOLO
 def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument("--weights", nargs="+",
-                    default=["weights/yolo26n_drone_640.pt", "weights/yolo26s_drone_640.pt"])
+                    default=["weights/yolo26/yolo26n_drone_640.pt", "weights/yolo26/yolo26s_drone_640.pt"])
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--warmup", type=int, default=30)
     ap.add_argument("--iters", type=int, default=200)

@@ -109,16 +109,16 @@ config: ORT **CPUExecutionProvider**, imgsz=640, batch=1, warmup=30, iters=200,
 
 | 정밀도 | 파일 | 크기 | 비고 |
 |--------|------|-----:|------|
-| FP32 | `weights/yolo26n_drone_640_fp32.onnx` | 9.80 MB | 기준; opset17, static, simplified |
-| FP16 | `weights/yolo26n_drone_640_fp16.onnx` | 4.97 MB | native `half=True`; float16 I/O |
-| INT8 | `weights/yolo26n_drone_640_int8.onnx` | **3.01 MB** | static PTQ(QDQ), Conv-only, 200장 캘리브 |
+| FP32 | `weights/yolo26/yolo26n_drone_640_fp32.onnx` | 9.80 MB | 기준; opset17, static, simplified |
+| FP16 | `weights/yolo26/yolo26n_drone_640_fp16.onnx` | 4.97 MB | native `half=True`; float16 I/O |
+| INT8 | `weights/yolo26/yolo26n_drone_640_int8.onnx` | **3.01 MB** | static PTQ(QDQ), Conv-only, 200장 캘리브 |
 
 **INT8 vs FP32** (동일 val 20장, conf 0.25): yolo26n 탐지 27→27(평균 IoU 0.961, |Δscore| 0.075),
 yolo26s 27→26(평균 IoU 0.966, |Δscore| 0.103) → 저하 미미.
 
 비교군/해상도 산출물: yolo26s_640 FP32 38.2 / FP16 19.2 / INT8 10.2 MB ·
 imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960 38.4/19.3/10.5 MB
-(`weights/yolo26{n,s}_drone_960_{fp32,fp16,int8}.onnx`).
+(`weights/yolo26/yolo26{n,s}_drone_960_{fp32,fp16,int8}.onnx`).
 
 ---
 
@@ -191,7 +191,7 @@ test set 추론 결과 — `yolo26n` **merged-300ep**(권장 배포 모델), img
 |:---:|:---:|:---:|
 | ![image0](demo/image0.jpg) | ![image8](demo/image8.jpg) | ![ground1](demo/ground1.jpg) |
 
-재현: `python scripts/predict.py --weights weights/yolo26n_drone_640_mergedataset_300epoch.pt --imgsz 640 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
+재현: `python scripts/predict.py --weights weights/yolo26/yolo26n_drone_640_mergedataset_300epoch.pt --imgsz 640 --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 10 --out demo`
 
 ---
 
@@ -217,13 +217,17 @@ INT8 모델도 입력은 float32다(Q/DQ는 그래프 내부 처리). 권장 con
 scripts/   [데이터] voc2yolo.py  fetch_maciullo.py  merge_datasets.py  analyze_merge.py  dataset_stats.py
            [학습·평가] train.py  train_all.sh  eval.py  eval_compare.py  analyze_fn.py  predict.py
            [DETR 계열] yolo2coco.py  dfine_eval.py  (+configs/dfine/, D-FINE 레포 별도 clone)
+           [통합평가] unified_eval.py  build_master_table.py  run_unified_all.sh
            [export·벤치] export.py  parity_ncnn.py  bench_latency.py  bench_gpu.py  sahi_bench.py
 configs/   dut_drone.yaml  merged_drone.yaml  eval_test_{dut,maciullo}.yaml
-weights/   yolo26{n,s}_drone_{640,960}.pt (+_{fp32,fp16,int8}.onnx)
-           yolo26n_drone_640_mergedataset_{100,300}epoch.pt (+onnx, +_ncnn_model/)
-           yolo26{n,l}_drone_960p2_mergedataset_100epoch.pt
-           dfine_n_drone_640_mergedataset_220epoch.pth
-           metrics.json  parity·latency 리포트(생성물)
+weights/   yolo26/  ← YOLO 계열 (repo 포함)
+             yolo26{n,s}_drone_{640,960}.pt (+_{fp32,fp16,int8}.onnx)
+             yolo26n_drone_640_mergedataset_{100,300}epoch.pt (+onnx, +_ncnn_model/)
+             yolo26{n,l}_drone_960p2_mergedataset_100epoch.pt
+           d_fine/  ← D-FINE 계열
+             dfine_n_drone_640_mergedataset_220epoch.pth (repo 포함, 58MB)
+             best_stg2.pth (D-FINE-L 960, 477MB — Drive 전용, repo 미포함 → 아래 표)
+           metrics.json  parity·latency 리포트(생성물, 루트 유지)
 cpp/       drone_detector.{h,cpp}  test_host.cpp  CMakeLists.txt  mlsdk_glue.md  (ncnn-Vulkan)
 docs/      ML2_ONDEVICE_RUNBOOK.md
 reports/   ablation_matrix.md(SSOT)  far_drone_p2_960.md  yolo26_family_fps_4090.md
@@ -231,6 +235,21 @@ reports/   ablation_matrix.md(SSOT)  far_drone_p2_960.md  yolo26_family_fps_4090
 demo/      추론 예시 (DUT image0~9 + Maciullo ground0~3)
 Dockerfile · docker-compose.yml · requirements.txt
 ```
+
+### 가중치 다운로드
+
+`weights/`는 계열별로 **`weights/yolo26/`**(YOLO)·**`weights/d_fine/`**(D-FINE)로 분기. **<100MB 파일은 repo 포함**(clone 편의), **D-FINE-L `best_stg2.pth`(477MB)만 GitHub 100MB 한도 초과로 Drive 전용**.
+
+| 모델 | imgsz | 릴리스 파일 | 크기 | 위치 / 다운로드 |
+|---|--:|---|--:|---|
+| **D-FINE-L** | 960 | `best_stg2.pth` | 477MB | **Drive 전용** <!-- DRIVE_LINK_DFINE_L: 여기에 공유 링크 --> ⏳ 업로드 예정 |
+| D-FINE-N | 640 | `dfine_n_drone_640_mergedataset_220epoch.pth` | 58MB | repo `weights/d_fine/` |
+| yolo26l-P2 | 960 | `yolo26l_drone_960p2_mergedataset_100epoch.pt` | 50MB | repo `weights/yolo26/` |
+| yolo26n-P2 | 960 | `yolo26n_drone_960p2_mergedataset_100epoch.pt` | 5.9MB | repo `weights/yolo26/` |
+| yolo26n merged | 640 | `yolo26n_drone_640_mergedataset_{100,300}epoch.pt` (+onnx/ncnn) | ~5MB | repo `weights/yolo26/` |
+| yolo26{n,s} (old) | 640/960 | `yolo26{n,s}_drone_{640,960}.pt` (+onnx) | 5~20MB | repo `weights/yolo26/` |
+
+> D-FINE-L 보조 체크포인트(`best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`)는 학습 볼륨 `runs/merged_dfine_l_960/`에 보관(배포 제외). Drive 업로드·링크 공유 후 위 표의 `DRIVE_LINK_DFINE_L` 자리에 링크를 기입한다.
 
 ---
 
@@ -355,11 +374,11 @@ python scripts/train.py
 | 데이터 통계 | `... python scripts/dataset_stats.py` | `python scripts/dataset_stats.py` |
 | 학습(단일) | `... python scripts/train.py --model yolo26n.pt --name yolo26n_drone_640` | `python scripts/train.py ...` |
 | 학습(n+s, 150ep) | `... bash scripts/train_all.sh` | `bash scripts/train_all.sh` |
-| 평가(val+test) | `... python scripts/eval.py --weights weights/yolo26n_drone_640.pt` | `python scripts/eval.py ...` |
-| Export ONNX/FP16/INT8 | `... python scripts/export.py --weights weights/yolo26n_drone_640.pt --stem yolo26n_drone_640` | `python scripts/export.py ...` |
+| 평가(val+test) | `... python scripts/eval.py --weights weights/yolo26/yolo26n_drone_640.pt` | `python scripts/eval.py ...` |
+| Export ONNX/FP16/INT8 | `... python scripts/export.py --weights weights/yolo26/yolo26n_drone_640.pt --stem yolo26n_drone_640` | `python scripts/export.py ...` |
 | 속도 벤치 GPU(4090) | `... python scripts/bench_gpu.py` | `python scripts/bench_gpu.py` |
 | 속도 벤치 CPU(ORT) | `... python scripts/bench_latency.py --stems yolo26n_drone_640 yolo26s_drone_640` | `python scripts/bench_latency.py ...` |
-| 예측 데모 | `... python scripts/predict.py --weights weights/yolo26n_drone_640.pt` | `python scripts/predict.py ...` |
+| 예측 데모 | `... python scripts/predict.py --weights weights/yolo26/yolo26n_drone_640.pt` | `python scripts/predict.py ...` |
 
 **학습 설정(ML2 baseline):** `yolo26n.pt`, `imgsz=640`, `epochs=150`, `patience=40`,
 `batch=-1`(자동 → 4090에서 ~35), `cache=disk`, NMS-free head 유지. `yolo26s`는 정확도 비교군.
@@ -388,7 +407,7 @@ python scripts/train.py
 ### DETR 계열 1차 — D-FINE-N@640 결과
 
 - 선정: RT-DETR 최소 모델 l(32M) = 온디바이스급 아님 → **D-FINE-N(3.8M, RT-DETR 계보 SOTA, ICLR 2025)**.
-- 학습: merged · 640 · P2 없음 · seed 0 · COCO ckpt tuning · 220ep(스톡) · batch 32(lr 비례 0.0002). yolo26n C/D행과 동일 선상(테스트셋·imgsz·pretrained 동일). 릴리스 = ep191 EMA(`weights/dfine_n_drone_640_mergedataset_220epoch.pth`).
+- 학습: merged · 640 · P2 없음 · seed 0 · COCO ckpt tuning · 220ep(스톡) · batch 32(lr 비례 0.0002). yolo26n C/D행과 동일 선상(테스트셋·imgsz·pretrained 동일). 릴리스 = ep191 EMA(`weights/d_fine/dfine_n_drone_640_mergedataset_220epoch.pth`).
 - 재현: `scripts/yolo2coco.py` → `configs/dfine/` → D-FINE `train.py` → `scripts/dfine_eval.py` (결과 `reports/dfine_n_eval.json`).
 
 **연산량·속도 스펙 (640, 실측)**:
@@ -474,7 +493,7 @@ python scripts/train.py
 > ℹ️ 위 수치는 **DUT-val** COCO eval 기준 — 학습 검증 분할은 **DUT만**(Maciullo는 train에만 포함, `reports/merge_stats.json`). repo 상단 yolo·D-FINE-N 표는 held-out **test**(DUT-test·Maciullo-test)라 split·평가기(ultralytics vs faster-coco-eval)가 달라 직접 비교 불가. held-out test(DUT-test·Maciullo-test)에서 faster-coco-eval로 측정한 동일-조건 수치는 상단 [**마스터표의 D-FINE-L 행**](#정확도--마스터표-전-모델-통일-평가-held-out-test)(`reports/dfine_l960_eval.json` = `reports/unified/dfine_l_960_m120.json`) 참조.
 
 - **산출물**: 학습 로그 `reports/dfine_l960_train_log.txt` (epoch별 COCO eval · best AP 포함).
-- **가중치 배포**: `best_stg2.pth` (477MB) — GitHub 100MB 한도 초과로 리포지토리 미포함. **Google Drive**: ⏳ 업로드 예정 <!-- DRIVE_LINK: 여기에 공유 링크 기재 -->. (참고: `best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`는 RunPod 볼륨 `/workspace/runs/merged_dfine_l_960/`에 보관.)
+- **가중치 배포**: `best_stg2.pth` (477MB) — GitHub 100MB 한도 초과로 repo 미포함, **Drive 전용**. 다운로드 링크는 [가중치 다운로드 표](#가중치-다운로드) 참조. (보조 `best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`는 학습 볼륨 `runs/merged_dfine_l_960/`에 보관.)
 
 ---
 

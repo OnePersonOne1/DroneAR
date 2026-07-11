@@ -4,8 +4,8 @@
 ML2 GPU(Vulkan) 배포 전 정합성 게이트. ncnn export(FP16)의 디코드/전처리가
 기존 ONNX 경로와 같은 박스를 내는지 demo/ 이미지로 검증한다.
 
-기준(ref)   : weights/yolo26n_drone_640_fp32.onnx  -> output0 (1,300,6) end2end 디코드 박스
-검증(test)  : weights/yolo26n_drone_640_ncnn_model -> out0 (5,8400) xywh+sigmoid score, CPU 추론
+기준(ref)   : weights/yolo26/yolo26n_drone_640_fp32.onnx  -> output0 (1,300,6) end2end 디코드 박스
+검증(test)  : weights/yolo26/yolo26n_drone_640_ncnn_model -> out0 (5,8400) xywh+sigmoid score, CPU 추론
 비교 공간   : 640 letterbox 입력 좌표(둘 다 동일 전처리라 역-letterbox 불필요)
 
 산출:
@@ -109,8 +109,8 @@ def match(ref, test):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--onnx", default="weights/yolo26n_drone_640_fp32.onnx")
-    ap.add_argument("--ncnn-dir", default="weights/yolo26n_drone_640_ncnn_model")
+    ap.add_argument("--onnx", default="weights/yolo26/yolo26n_drone_640_fp32.onnx")
+    ap.add_argument("--ncnn-dir", default="weights/yolo26/yolo26n_drone_640_ncnn_model")
     ap.add_argument("--demo", default="demo")
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--conf", type=float, default=0.25)

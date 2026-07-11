@@ -2,7 +2,7 @@
 """Run a trained YOLO26 drone detector on an image or folder and save annotated outputs.
 
 Examples:
-    python scripts/predict.py --weights weights/yolo26n_drone_640.pt --source some/dir
+    python scripts/predict.py --weights weights/yolo26/yolo26n_drone_640.pt --source some/dir
     python scripts/predict.py --weights runs/yolo26n_drone_640/weights/best.pt \
         --source /mnt/ssd_0/dataset/dut_yolo/images/test --max 12
 """
@@ -14,7 +14,7 @@ from ultralytics import YOLO
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--weights", default="weights/yolo26n_drone_640.pt")
+    ap.add_argument("--weights", default="weights/yolo26/yolo26n_drone_640.pt")
     ap.add_argument("--source", default="/mnt/ssd_0/dataset/dut_yolo/images/test")
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--conf", type=float, default=0.25)

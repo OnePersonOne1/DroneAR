@@ -8,8 +8,8 @@ def test_inference():
     out = []
 
     with ncnn.Net() as net:
-        net.load_param("weights/yolo26n_drone_640_mergedataset_300epoch_ncnn_model/model.ncnn.param")
-        net.load_model("weights/yolo26n_drone_640_mergedataset_300epoch_ncnn_model/model.ncnn.bin")
+        net.load_param("weights/yolo26/yolo26n_drone_640_ncnn_model/model.ncnn.param")
+        net.load_model("weights/yolo26/yolo26n_drone_640_ncnn_model/model.ncnn.bin")
 
         with net.create_extractor() as ex:
             ex.input("in0", ncnn.Mat(in0.squeeze(0).numpy()).clone())

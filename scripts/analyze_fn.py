@@ -92,9 +92,9 @@ def main():
     ap.add_argument("--far-px", type=float, default=16.0)
     ap.add_argument("--out", default="reports/fn_size_analysis")
     ap.add_argument("--models", nargs="+", default=[
-        "old_DUT_only:weights/yolo26n_drone_640.pt",
-        "merged_100ep:weights/yolo26n_drone_640_mergedataset_100epoch.pt",
-        "merged_300ep:weights/yolo26n_drone_640_mergedataset_300epoch.pt"])
+        "old_DUT_only:weights/yolo26/yolo26n_drone_640.pt",
+        "merged_100ep:weights/yolo26/yolo26n_drone_640_mergedataset_100epoch.pt",
+        "merged_300ep:weights/yolo26/yolo26n_drone_640_mergedataset_300epoch.pt"])
     a = ap.parse_args()
     merged = Path(a.merged)
     sets = {"DUT-test": ("test_dut",), "Maciullo-test": ("test_maciullo",)}

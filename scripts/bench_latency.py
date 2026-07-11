@@ -20,7 +20,7 @@ import onnxruntime as ort
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--weights-dir", default="weights")
+    ap.add_argument("--weights-dir", default="weights/yolo26")
     ap.add_argument("--stems", nargs="+",
                     default=["yolo26n_drone_640", "yolo26s_drone_640"])
     ap.add_argument("--imgsz", type=int, default=640)
