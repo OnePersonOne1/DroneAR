@@ -496,6 +496,10 @@ python scripts/train.py
 |---|---:|---:|---:|---:|---:|---:|---:|
 | **best_stg2** | **0.7346** | 0.9696 | 0.8442 | 0.6655 | 0.8078 | 0.8424 | 0.7969 |
 
+**AP / epoch 곡선** (DUT-val COCO, `reports/dfine_l960_train_log.txt` → `scripts/plot_dfine_l_curve.py`) — mAP50는 초반 수렴, mAP50-95는 ep~30까지 상승 후 plateau. ep108 stg2 전환(증강 off·EMA restart) 후 **best ep115**:
+
+![dfine-l ap curve](reports/dfine_l960_ap_curve.png)
+
 > ℹ️ 위 수치는 **DUT-val** COCO eval 기준 — 학습 검증 분할은 **DUT만**(Maciullo는 train에만 포함, `reports/merge_stats.json`). repo 상단 yolo·D-FINE-N 표는 held-out **test**(DUT-test·Maciullo-test)라 split·평가기(ultralytics vs faster-coco-eval)가 달라 직접 비교 불가. held-out test(DUT-test·Maciullo-test)에서 faster-coco-eval로 측정한 동일-조건 수치는 상단 [**마스터표의 D-FINE-L 행**](#정확도--마스터표-전-모델-통일-평가-held-out-test)(`reports/dfine_l960_eval.json` = `reports/unified/dfine_l_960_m120.json`) 참조.
 
 - **산출물**: 학습 로그 `reports/dfine_l960_train_log.txt` (epoch별 COCO eval · best AP 포함).
