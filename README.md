@@ -73,19 +73,22 @@
 (`scripts/bench_unified_latency.py` → `reports/unified_latency.json`). **순수 forward**(전·후처리·NMS 제외, torch),
 batch 1, **각 모델 배포 imgsz**. GPU=`cuda.Event`(warmup20/iter100), CPU=wall-clock(warmup3/iter12).
 
-| 모델 | imgsz | GPU fp32 (ms · FPS) | GPU fp16 | CPU 1스레드 (ms · FPS) | CPU 8스레드 (ms · FPS) |
+각 셀 = `ms · FPS`. **GPU fp32 vs fp16 구분**은 별도 컬럼. CPU는 fp32만(fp16 native 커널 없음).
+
+| 모델 | imgsz | GPU fp32 | GPU fp16 | CPU 1스레드 | CPU 8스레드 |
 |---|--:|--:|--:|--:|--:|
-| yolo26n (merged) | 640 | 2.97 · **337** | 3.17 · 316 | 62 · 16.1 | 22 · **45.0** |
-| yolo26s | 640 | 3.08 · 324 | 3.20 · 313 | 171 · 5.9 | 61 · 16.4 |
-| yolo26l-P2 (merged) | 960 | 8.80 · 114 | 6.19 · 162 | 2235 · 0.45 | 603 · 1.7 |
-| D-FINE-N (merged) | 640 | 6.78 · 148 | — ¹ | 107 · 9.4 | 37 · 27.2 |
-| D-FINE-L (merged) | 960 | 11.97 · 84 | — ¹ | 1642 · 0.6 | 497 · 2.0 |
+| yolo26n (merged) | 640 | 2.94 · **340** | 3.15 · 317 ¹ | 65 · 15.5 | 30 · **33.3** |
+| yolo26s | 640 | 3.12 · 321 | 3.23 · 310 ¹ | 196 · 5.1 | 58 · 17.1 |
+| yolo26l-P2 (merged) | 960 | 8.83 · 113 | **6.14 · 163** ¹ | 2047 · 0.49 | 609 · 1.6 |
+| D-FINE-N (merged) | 640 | 5.14 · 195 | 6.20 · 161 ² | 112 · 9.0 | 42 · 24.1 |
+| D-FINE-L (merged) | 960 | 11.96 · 84 | 12.62 · 79 ² | 1647 · 0.61 | 480 · 2.1 |
 
-¹ D-FINE fp16: `grid_sample`(deformable attn) half 미지원 → fp32만. ML2 이식도 같은 이유로 불가([아래](#추론-입력화질-설정-가이드--계열별-양상)).
+¹ **yolo fp16 = 전체 half**(`.half()`, ONNX/TensorRT fp16 배포와 동일 형태).
+² **D-FINE fp16 = `torch.autocast`(AMP)** — matmul/conv만 fp16이고 **`grid_sample`(deformable attn)은 fp32 유지** + 캐스팅 오버헤드라 **torch에선 오히려 fp32보다 느림**(N·L 모두). 실 fp16 가속은 **TensorRT 엔진**(fp16 grid_sample 커널+퓨전, 클라우드 배포)에서 나온다.
 
-- **GPU**: yolo26n 최속(337 FPS). **D-FINE-L**이 정확도 최고지만 12ms(84 FPS) — 클라우드 전용. D-FINE-N은 148 FPS로 중간, yolo26l-P2(960·114 FPS)와 비슷대역.
-- **yolo fp16**: 640은 GPU 미포화라 **거의 무이득**(2.97→3.17ms, 오히려 소폭↑), 960 l-P2는 이득(8.80→6.19ms).
-- **CPU**: **D-FINE-N(8스레드 27 FPS)이 yolo26s(16 FPS)보다 빠름**(N은 640·소형). 반면 960 모델(yolo26l-P2·D-FINE-L)은 CPU에서 <2 FPS → **GPU 전용**.
+- **GPU**: yolo26n 최속(340 FPS). **D-FINE-N이 195 FPS로 GPU 효율 우수**(deformable attn에도 yolo26l-P2 113 FPS보다 빠름). **D-FINE-L**은 정확도 최고지만 84 FPS — 클라우드 전용.
+- **fp16 이득**: yolo 640은 GPU 미포화라 **무이득**(오히려 소폭↓), 960 yolo26l-P2는 뚜렷(113→**163 FPS**). **D-FINE는 torch autocast fp16이 fp32보다 느림**(grid_sample fp32+캐스팅) → 클라우드 fp16 가속은 **TensorRT 필수**.
+- **CPU**: **D-FINE-N(8스레드 24 FPS)이 yolo26s(17 FPS)보다 빠름**(N은 640·소형). 반면 960 모델(yolo26l-P2·D-FINE-L)은 CPU ~2 FPS → **GPU 전용**. (CPU 8스레드는 스레드 경합으로 run별 변동 있음.)
 - ⚠️ 이 표는 **torch 순수 forward** — ONNX Runtime 최적화 배포 수치는 아래 **CPU (ORT)** 표(yolo, INT8 포함, 별도 측정)와 다르다(ORT가 더 빠름).
 
 **정확도-속도 트레이드오프** (재생성 `python scripts/plot_ap_latency.py`):
@@ -451,10 +454,10 @@ python scripts/train.py
 
 | 모델 | Params | GFLOPs | 4090 fp32 | Ryzen CPU t8 | ML2 CPU |
 |---|---:|---:|---:|---:|---:|
-| yolo26n | 2.5M | 5.8 | 2.97ms (337FPS) | 22ms (45FPS) | ~15 FPS 실측 |
-| D-FINE-N | 3.7M | 7.1 | 6.78ms (148FPS) | 37ms (27FPS) | ~7–9 FPS 추정 |
+| yolo26n | 2.5M | 5.8 | 2.94ms (340FPS) | 30ms (33FPS) | ~15 FPS 실측 |
+| D-FINE-N | 3.7M | 7.1 | 5.14ms (195FPS) | 42ms (24FPS) | ~7–9 FPS 추정 |
 
-- GFLOPs는 **1.2×**인데 지연은 **4090 2.3× · CPU 1.7×** — FLOPs가 아니라 커널 효율(deformable attention·LayerNorm의 CPU/GPU 비친화) 차이로 인한 것으로 추정. (Params/GFLOPs 산출: yolo=ultralytics profile, D-FINE=calflops — 동일 MACs×2 관례.)
+- GFLOPs는 **1.2×**인데 지연은 **4090 1.75× · CPU 1.4×** — FLOPs가 아니라 커널 효율(deformable attention·LayerNorm의 CPU/GPU 비친화) 차이로 인한 것으로 추정. (Params/GFLOPs 산출: yolo=ultralytics profile, D-FINE=calflops — 동일 MACs×2 관례.)
 
 **정확도 (held-out test)**: D-FINE-N·L 포함 전 모델 수치는 상단 [마스터표](#정확도--마스터표-전-모델-통일-평가-held-out-test)로 통일(held-out test·faster-coco-eval·conf 0.25·IoU 0.5). D-FINE-N 요약 — DUT **AP50 0.950 / AP50-95 0.706 · far 0.947 · <8px 0.941**(FP/img 0.08), Maci **0.865 / 0.423 · far 0.838 · <8px 0.636**(FP/img 0.19). yolo26n C/D와 동일 640·pretrained 선상, far·소형에서 우위(아래).
 
@@ -511,7 +514,7 @@ python scripts/train.py
 
 ![dfine ml2 tradeoff](reports/dfine_n_ml2_tradeoff.png)
 
-- trade-off: **far +7.1pt(vs yolo26n-D) ↔ fps ~1/2**(4090 337→148 FPS · CPU t8 45→27 FPS).
+- trade-off: **far +7.1pt(vs yolo26n-D) ↔ fps ↓**(4090 340→195 FPS · CPU t8 33→24 FPS — D-FINE-N은 GPU 효율 우수).
 
 ### DETR 계열 2차 — D-FINE-L@960 결과
 

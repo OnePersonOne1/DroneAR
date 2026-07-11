@@ -2,31 +2,32 @@
   "meta": {
     "gpu": "NVIDIA GeForce RTX 4090",
     "cpu": "x86_64",
-    "note": "순수 forward(전·후처리 제외), batch=1, 각 모델 배포 imgsz. GPU=cuda.Event(warmup20/iter100), CPU=wall-clock(warmup3/iter12)."
+    "note": "순수 forward(전·후처리 제외), batch=1, 각 모델 배포 imgsz. GPU=cuda.Event(warmup20/iter100), CPU=wall-clock(warmup3/iter12). yolo fp16=half · dfine fp16=autocast(grid_sample fp32)."
   },
   "yolo26n_m300": {
     "name": "yolo26n (merged)",
     "family": "yolo",
     "imgsz": 640,
     "gpu_fp32": {
-      "ms": 2.971,
-      "std": 0.048,
-      "fps": 336.6
+      "ms": 2.943,
+      "std": 0.089,
+      "fps": 339.8
     },
     "gpu_fp16": {
-      "ms": 3.169,
-      "std": 0.039,
-      "fps": 315.5
+      "ms": 3.153,
+      "std": 0.18,
+      "fps": 317.1,
+      "method": "half"
     },
     "cpu_t1": {
-      "ms": 62.26,
-      "std": 0.64,
-      "fps": 16.06
+      "ms": 64.62,
+      "std": 1.31,
+      "fps": 15.47
     },
     "cpu_t8": {
-      "ms": 22.24,
-      "std": 7.66,
-      "fps": 44.97
+      "ms": 30.06,
+      "std": 8.85,
+      "fps": 33.27
     }
   },
   "yolo26s_640": {
@@ -34,24 +35,25 @@
     "family": "yolo",
     "imgsz": 640,
     "gpu_fp32": {
-      "ms": 3.084,
-      "std": 0.062,
-      "fps": 324.3
+      "ms": 3.119,
+      "std": 0.069,
+      "fps": 320.6
     },
     "gpu_fp16": {
-      "ms": 3.198,
-      "std": 0.043,
-      "fps": 312.7
+      "ms": 3.226,
+      "std": 0.096,
+      "fps": 310.0,
+      "method": "half"
     },
     "cpu_t1": {
-      "ms": 170.58,
-      "std": 1.83,
-      "fps": 5.86
+      "ms": 196.27,
+      "std": 1.55,
+      "fps": 5.09
     },
     "cpu_t8": {
-      "ms": 60.86,
-      "std": 10.54,
-      "fps": 16.43
+      "ms": 58.42,
+      "std": 12.57,
+      "fps": 17.12
     }
   },
   "yolo26lP2": {
@@ -59,24 +61,25 @@
     "family": "yolo",
     "imgsz": 960,
     "gpu_fp32": {
-      "ms": 8.802,
-      "std": 0.092,
-      "fps": 113.6
+      "ms": 8.83,
+      "std": 0.035,
+      "fps": 113.3
     },
     "gpu_fp16": {
-      "ms": 6.191,
-      "std": 0.073,
-      "fps": 161.5
+      "ms": 6.135,
+      "std": 0.045,
+      "fps": 163.0,
+      "method": "half"
     },
     "cpu_t1": {
-      "ms": 2235.4,
-      "std": 19.24,
-      "fps": 0.45
+      "ms": 2046.98,
+      "std": 17.7,
+      "fps": 0.49
     },
     "cpu_t8": {
-      "ms": 602.69,
-      "std": 4.45,
-      "fps": 1.66
+      "ms": 609.45,
+      "std": 10.57,
+      "fps": 1.64
     }
   },
   "dfine_n": {
@@ -84,22 +87,25 @@
     "family": "dfine",
     "imgsz": 640,
     "gpu_fp32": {
-      "ms": 6.781,
-      "std": 0.056,
-      "fps": 147.5
+      "ms": 5.14,
+      "std": 0.042,
+      "fps": 194.6
     },
     "gpu_fp16": {
-      "error": "expected mat1 and mat2 to have the same dtype, but got: float != c10::Half"
+      "ms": 6.197,
+      "std": 0.056,
+      "fps": 161.4,
+      "method": "autocast"
     },
     "cpu_t1": {
-      "ms": 106.54,
-      "std": 0.54,
-      "fps": 9.39
+      "ms": 111.66,
+      "std": 0.78,
+      "fps": 8.96
     },
     "cpu_t8": {
-      "ms": 36.78,
-      "std": 9.54,
-      "fps": 27.19
+      "ms": 41.54,
+      "std": 10.77,
+      "fps": 24.07
     }
   },
   "dfine_l": {
@@ -107,22 +113,25 @@
     "family": "dfine",
     "imgsz": 960,
     "gpu_fp32": {
-      "ms": 11.974,
-      "std": 0.146,
-      "fps": 83.5
+      "ms": 11.964,
+      "std": 0.107,
+      "fps": 83.6
     },
     "gpu_fp16": {
-      "error": "expected mat1 and mat2 to have the same dtype, but got: float != c10::Half"
+      "ms": 12.623,
+      "std": 0.194,
+      "fps": 79.2,
+      "method": "autocast"
     },
     "cpu_t1": {
-      "ms": 1641.75,
-      "std": 3.17,
+      "ms": 1647.2,
+      "std": 10.82,
       "fps": 0.61
     },
     "cpu_t8": {
-      "ms": 496.72,
-      "std": 11.61,
-      "fps": 2.01
+      "ms": 479.8,
+      "std": 10.46,
+      "fps": 2.08
     }
   }
 }

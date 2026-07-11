@@ -71,9 +71,10 @@ def main():
                fontsize=9.5, bbox_to_anchor=(0.5, 0.965))
     fig.suptitle("Accuracy vs latency — deployment imgsz, pure forward, batch 1",
                  fontsize=12.5, color=INK, y=0.995, fontweight="bold")
-    fig.text(0.5, 0.005, "Left-up = better (higher AP, lower latency). "
+    fig.text(0.5, 0.005, "Left-up = better (higher AP, lower latency). GPU=fp32 · CPU=fp32 "
+             "(fp16 breakdown in table: yolo l-P2 114->162 FPS, D-FINE fp16 gain small). "
              "D-FINE = higher AP but slower; yolo26n = fastest.",
-             ha="center", fontsize=8.3, color=MUTED)
+             ha="center", fontsize=7.6, color=MUTED)
     fig.tight_layout(rect=(0, 0.03, 1, 0.90))
     out = Path("reports/ap_latency.png")
     fig.savefig(out, dpi=150, facecolor="white")
