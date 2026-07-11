@@ -2,7 +2,8 @@
   "meta": {
     "gpu": "NVIDIA GeForce RTX 4090",
     "cpu": "x86_64",
-    "note": "순수 forward(전·후처리 제외), batch=1, 각 모델 배포 imgsz. GPU=cuda.Event(warmup20/iter100), CPU=wall-clock(warmup3/iter12). yolo fp16=half · dfine fp16=autocast(grid_sample fp32)."
+    "note": "순수 forward(전·후처리 제외), batch=1, 각 모델 배포 imgsz. GPU=cuda.Event(warmup20/iter100), CPU=wall-clock(warmup3/iter12). fp16 미측정 — 계열별 fp16 배포 스택 상이로 공정 비교 불가.",
+    "precision": "fp32 (전 모델 통일)"
   },
   "yolo26n_m300": {
     "name": "yolo26n (merged)",
@@ -12,12 +13,6 @@
       "ms": 2.943,
       "std": 0.089,
       "fps": 339.8
-    },
-    "gpu_fp16": {
-      "ms": 3.153,
-      "std": 0.18,
-      "fps": 317.1,
-      "method": "half"
     },
     "cpu_t1": {
       "ms": 64.62,
@@ -39,12 +34,6 @@
       "std": 0.069,
       "fps": 320.6
     },
-    "gpu_fp16": {
-      "ms": 3.226,
-      "std": 0.096,
-      "fps": 310.0,
-      "method": "half"
-    },
     "cpu_t1": {
       "ms": 196.27,
       "std": 1.55,
@@ -64,12 +53,6 @@
       "ms": 8.83,
       "std": 0.035,
       "fps": 113.3
-    },
-    "gpu_fp16": {
-      "ms": 6.135,
-      "std": 0.045,
-      "fps": 163.0,
-      "method": "half"
     },
     "cpu_t1": {
       "ms": 2046.98,
@@ -91,12 +74,6 @@
       "std": 0.042,
       "fps": 194.6
     },
-    "gpu_fp16": {
-      "ms": 6.197,
-      "std": 0.056,
-      "fps": 161.4,
-      "method": "autocast"
-    },
     "cpu_t1": {
       "ms": 111.66,
       "std": 0.78,
@@ -116,12 +93,6 @@
       "ms": 11.964,
       "std": 0.107,
       "fps": 83.6
-    },
-    "gpu_fp16": {
-      "ms": 12.623,
-      "std": 0.194,
-      "fps": 79.2,
-      "method": "autocast"
     },
     "cpu_t1": {
       "ms": 1647.2,

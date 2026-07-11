@@ -99,16 +99,8 @@ def bench_one(m):
     mean, std = _bench(net, x, 20, 100, gpu=True)
     r["gpu_fp32"] = {"ms": round(mean, 3), "std": round(std, 3), "fps": round(1000/mean, 1)}
     del net, x; torch.cuda.empty_cache()
-    # GPU fp16 — yolo=half, dfine=autocast
-    if fam == "yolo":
-        net = load_model_fp32(m, dev).half(); x = make_x(imgsz, dev, half=True)
-        mean, std = _bench(net, x, 20, 100, gpu=True)
-        r["gpu_fp16"] = {"ms": round(mean, 3), "std": round(std, 3), "fps": round(1000/mean, 1), "method": "half"}
-    else:
-        net = load_model_fp32(m, dev); x = make_x(imgsz, dev)
-        mean, std = _bench(net, x, 20, 100, gpu=True, autocast=True)
-        r["gpu_fp16"] = {"ms": round(mean, 3), "std": round(std, 3), "fps": round(1000/mean, 1), "method": "autocast"}
-    del net, x; torch.cuda.empty_cache()
+    # fp16 미측정 — 전 모델 fp32 통일 비교(계열별 fp16 배포 스택 상이:
+    #   yolo=ONNX/TRT half, D-FINE=TensorRT fp16(grid_sample 플러그인) → 공정 비교 불가).
     # CPU fp32 (threads 1, 8)
     for th in (1, 8):
         torch.set_num_threads(th)
@@ -143,13 +135,13 @@ def main():
             print(p.stdout[-500:], p.stderr[-500:]); continue
         results[key] = json.loads(line[0][len("__RESULT__"):])
         r = results[key]
-        print(f"  GPU fp32 {r['gpu_fp32']['fps']} · fp16 {r['gpu_fp16']['fps']} FPS "
-              f"| CPU t8 {r['cpu_t8']['fps']} FPS")
+        print(f"  GPU fp32 {r['gpu_fp32']['fps']} FPS | CPU t8 {r['cpu_t8']['fps']} FPS")
 
     meta = {"gpu": torch.cuda.get_device_name(0), "cpu": platform.processor() or "AMD Ryzen 9 7950X",
+            "precision": "fp32 (전 모델 통일)",
             "note": "순수 forward(전·후처리 제외), batch=1, 각 모델 배포 imgsz. "
                     "GPU=cuda.Event(warmup20/iter100), CPU=wall-clock(warmup3/iter12). "
-                    "yolo fp16=half · dfine fp16=autocast(grid_sample fp32)."}
+                    "fp16 미측정 — 계열별 fp16 배포 스택 상이로 공정 비교 불가."}
     Path("reports").mkdir(exist_ok=True)
     Path("reports/unified_latency.json").write_text(
         json.dumps({"meta": meta, **results}, indent=2, ensure_ascii=False))

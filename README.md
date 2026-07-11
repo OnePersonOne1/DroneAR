@@ -73,21 +73,19 @@
 (`scripts/bench_unified_latency.py` → `reports/unified_latency.json`). **순수 forward**(전·후처리·NMS 제외, torch),
 batch 1, **각 모델 배포 imgsz**. GPU=`cuda.Event`(warmup20/iter100), CPU=wall-clock(warmup3/iter12).
 
-각 셀 = `ms · FPS`. **GPU fp32 vs fp16 구분**은 별도 컬럼. CPU는 fp32만(fp16 native 커널 없음).
+각 셀 = `ms · FPS`. **정밀도 fp32 통일**(전 모델 동일) — fp16은 계열별 배포 스택이 달라(yolo=ONNX/TensorRT half, D-FINE=TensorRT fp16+`grid_sample` 플러그인) **공정 비교 불가**라 제외.¹
 
-| 모델 | imgsz | GPU fp32 | GPU fp16 | CPU 1스레드 | CPU 8스레드 |
-|---|--:|--:|--:|--:|--:|
-| yolo26n (merged) | 640 | 2.94 · **340** | 3.15 · 317 ¹ | 65 · 15.5 | 30 · **33.3** |
-| yolo26s | 640 | 3.12 · 321 | 3.23 · 310 ¹ | 196 · 5.1 | 58 · 17.1 |
-| yolo26l-P2 (merged) | 960 | 8.83 · 113 | **6.14 · 163** ¹ | 2047 · 0.49 | 609 · 1.6 |
-| D-FINE-N (merged) | 640 | 5.14 · 195 | 6.20 · 161 ² | 112 · 9.0 | 42 · 24.1 |
-| D-FINE-L (merged) | 960 | 11.96 · 84 | 12.62 · 79 ² | 1647 · 0.61 | 480 · 2.1 |
+| 모델 | imgsz | GPU fp32 | CPU 1스레드 | CPU 8스레드 |
+|---|--:|--:|--:|--:|
+| yolo26n (merged) | 640 | 2.94 · **340** | 65 · 15.5 | 30 · **33.3** |
+| yolo26s | 640 | 3.12 · 321 | 196 · 5.1 | 58 · 17.1 |
+| yolo26l-P2 (merged) | 960 | 8.83 · 113 | 2047 · 0.49 | 609 · 1.6 |
+| D-FINE-N (merged) | 640 | 5.14 · 195 | 112 · 9.0 | 42 · 24.1 |
+| D-FINE-L (merged) | 960 | 11.96 · 84 | 1647 · 0.61 | 480 · 2.1 |
 
-¹ **yolo fp16 = 전체 half**(`.half()`, ONNX/TensorRT fp16 배포와 동일 형태).
-² **D-FINE fp16 = `torch.autocast`(AMP)** — matmul/conv만 fp16이고 **`grid_sample`(deformable attn)은 fp32 유지** + 캐스팅 오버헤드라 **torch에선 오히려 fp32보다 느림**(N·L 모두). 실 fp16 가속은 **TensorRT 엔진**(fp16 grid_sample 커널+퓨전, 클라우드 배포)에서 나온다.
+¹ 참고: torch에서 yolo `.half()`는 640 미포화로 무이득·960 l-P2만 이득(113→163 FPS), D-FINE는 autocast fp16이 grid_sample fp32 유지+캐스팅 오버헤드로 fp32보다 느림 → **실 fp16 가속은 TensorRT 엔진 필요**(이 환경 미설치). yolo 계열 fp16 상세는 [아래 GPU 표](#추론-속도--gpu-rtx-4090-yolo-상세).
 
 - **GPU**: yolo26n 최속(340 FPS). **D-FINE-N이 195 FPS로 GPU 효율 우수**(deformable attn에도 yolo26l-P2 113 FPS보다 빠름). **D-FINE-L**은 정확도 최고지만 84 FPS — 클라우드 전용.
-- **fp16 이득**: yolo 640은 GPU 미포화라 **무이득**(오히려 소폭↓), 960 yolo26l-P2는 뚜렷(113→**163 FPS**). **D-FINE는 torch autocast fp16이 fp32보다 느림**(grid_sample fp32+캐스팅) → 클라우드 fp16 가속은 **TensorRT 필수**.
 - **CPU**: **D-FINE-N(8스레드 24 FPS)이 yolo26s(17 FPS)보다 빠름**(N은 640·소형). 반면 960 모델(yolo26l-P2·D-FINE-L)은 CPU ~2 FPS → **GPU 전용**. (CPU 8스레드는 스레드 경합으로 run별 변동 있음.)
 - ⚠️ 이 표는 **torch 순수 forward** — ONNX Runtime 최적화 배포 수치는 아래 **CPU (ORT)** 표(yolo, INT8 포함, 별도 측정)와 다르다(ORT가 더 빠름).
 
