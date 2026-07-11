@@ -264,7 +264,7 @@ weights/   yolo26/  ← YOLO 계열 (repo 포함)
              yolo26{n,l}_drone_960p2_mergedataset_100epoch.pt
            d_fine/  ← D-FINE 계열
              dfine_n_drone_640_mergedataset_220epoch.pth (repo 포함, 58MB)
-             best_stg2.pth (D-FINE-L 960, 477MB — Drive 전용, repo 미포함 → 아래 표)
+             dfine_l_drone_960_mergedataset_120epoch.pth (=best_stg2 ep115, 477MB — Drive 전용, repo 미포함 → 아래 표)
            metrics.json  parity·latency 리포트(생성물, 루트 유지)
 cpp/       drone_detector.{h,cpp}  test_host.cpp  CMakeLists.txt  mlsdk_glue.md  (ncnn-Vulkan)
 docs/      ML2_ONDEVICE_RUNBOOK.md
@@ -276,11 +276,11 @@ Dockerfile · docker-compose.yml · requirements.txt
 
 ### 가중치 다운로드
 
-`weights/`는 계열별로 **`weights/yolo26/`**(YOLO)·**`weights/d_fine/`**(D-FINE)로 분기. **<100MB 파일은 repo 포함**(clone 편의), **D-FINE-L `best_stg2.pth`(477MB)만 GitHub 100MB 한도 초과로 Drive 전용**.
+`weights/`는 계열별로 **`weights/yolo26/`**(YOLO)·**`weights/d_fine/`**(D-FINE)로 분기. **<100MB 파일은 repo 포함**(clone 편의), **D-FINE-L `dfine_l_drone_960_mergedataset_120epoch.pth`(477MB)만 GitHub 100MB 한도 초과로 Drive 전용**.
 
 | 모델 | imgsz | 릴리스 파일 | 크기 | 위치 / 다운로드 |
 |---|--:|---|--:|---|
-| **D-FINE-L** | 960 | `best_stg2.pth` | 477MB | **Drive 전용** <!-- DRIVE_LINK_DFINE_L: 여기에 공유 링크 --> ⏳ 업로드 예정 |
+| **D-FINE-L** | 960 | `dfine_l_drone_960_mergedataset_120epoch.pth` | 477MB | **Drive 전용** <!-- DRIVE_LINK_DFINE_L: 여기에 공유 링크 --> ⏳ 업로드 예정 |
 | D-FINE-N | 640 | `dfine_n_drone_640_mergedataset_220epoch.pth` | 58MB | repo `weights/d_fine/` |
 | yolo26l-P2 | 960 | `yolo26l_drone_960p2_mergedataset_100epoch.pt` | 50MB | repo `weights/yolo26/` |
 | yolo26n-P2 | 960 | `yolo26n_drone_960p2_mergedataset_100epoch.pt` | 5.9MB | repo `weights/yolo26/` |
@@ -519,7 +519,7 @@ python scripts/train.py
 클라우드 주력 모델. D-FINE-N(온디바이스 검토용)에서 **모델 스케일 상향(N 3.7M → L 30.7M)** + **학습 해상도 960**.
 
 - **학습**: merged_drone · **960** · seed 0 · COCO ckpt tuning · **120ep** · **3×RTX4090, total_batch 24** · 학습 시간 **2일 4시간**. 설정 `configs/dfine/`·`dfine_l960_3gpu_pod.yml`, 재현 절차 `HANDOFF.md`.
-- **2-스테이지**: `stop_epoch 108` — ep0–107(stg1, 강증강) → ep108–119(stg2, 증강 off·EMA restart). **release = `best_stg2.pth`**(stg2 최고점), 비교용 `best_stg1.pth` 병존.
+- **2-스테이지**: `stop_epoch 108` — ep0–107(stg1, 강증강) → ep108–119(stg2, 증강 off·EMA restart). **release = `best_stg2.pth`**(stg2 최고점 ep115) → 배포 파일명 `dfine_l_drone_960_mergedataset_120epoch.pth`, 비교용 `best_stg1.pth` 병존.
 - **추론**: DETR 계열 스케일 특화로 **960 고정**(1280 상향은 붕괴 — [위 D-FINE-N 분석](#추론-입력화질-설정-가이드--계열별-양상)과 동일 성질).
 
 **학습 곡선 요약 (DUT-val · COCO eval)** — 수렴 best = **ep115 (stg2)**. *held-out test 비교 수치는 [마스터표](#정확도--마스터표-전-모델-통일-평가-held-out-test)*:
@@ -535,7 +535,7 @@ python scripts/train.py
 > ℹ️ 위 수치는 **DUT-val** COCO eval 기준 — 학습 검증 분할은 **DUT만**(Maciullo는 train에만 포함, `reports/merge_stats.json`). repo 상단 yolo·D-FINE-N 표는 held-out **test**(DUT-test·Maciullo-test)라 split·평가기(ultralytics vs faster-coco-eval)가 달라 직접 비교 불가. held-out test(DUT-test·Maciullo-test)에서 faster-coco-eval로 측정한 동일-조건 수치는 상단 [**마스터표의 D-FINE-L 행**](#정확도--마스터표-전-모델-통일-평가-held-out-test)(`reports/dfine_l960_eval.json` = `reports/unified/dfine_l_960_m120.json`) 참조.
 
 - **산출물**: 학습 로그 `reports/dfine_l960_train_log.txt` (epoch별 COCO eval · best AP 포함).
-- **가중치 배포**: `best_stg2.pth` (477MB) — GitHub 100MB 한도 초과로 repo 미포함, **Drive 전용**. 다운로드 링크는 [가중치 다운로드 표](#가중치-다운로드) 참조. (보조 `best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`는 학습 볼륨 `runs/merged_dfine_l_960/`에 보관.)
+- **가중치 배포**: 릴리스 `dfine_l_drone_960_mergedataset_120epoch.pth` (=학습 산출물 `best_stg2.pth` ep115, 477MB) — GitHub 100MB 한도 초과로 repo 미포함, **Drive 전용**. 다운로드 링크는 [가중치 다운로드 표](#가중치-다운로드) 참조. (보조 `best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`는 학습 볼륨 `runs/merged_dfine_l_960/`에 보관.)
 
 ---
 

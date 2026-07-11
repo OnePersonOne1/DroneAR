@@ -34,3 +34,5 @@ cpp/build-ml2/
 
 # NOTE: weights/ is intentionally tracked (best.pt, *.onnx, *.tflite, metrics).
 # Large single artifacts (>50MB) go to Git LFS or a GitHub Release (see README).
+# D-FINE-L release (477MB, >100MB GitHub limit) — Drive 전용, repo 미포함.
+weights/d_fine/dfine_l_drone_960_mergedataset_120epoch.pth
