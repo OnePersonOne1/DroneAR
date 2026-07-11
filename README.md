@@ -440,7 +440,7 @@ python scripts/train.py
 
 ### DETR 계열 2차 — D-FINE-L@960 결과
 
-클라우드 주력 모델. D-FINE-N(온디바이스 검토용)에서 **모델 스케일 상향(N 3.7M → L 30.7M)** + **학습 해상도 960**으로, yolo26l-P2@960(H·I행)과 동일 선상 비교를 겨냥.
+클라우드 주력 모델. D-FINE-N(온디바이스 검토용)에서 **모델 스케일 상향(N 3.7M → L 30.7M)** + **학습 해상도 960**.
 
 - **학습**: merged_drone · **960** · seed 0 · COCO ckpt tuning · **120ep** · **3×RTX4090, total_batch 24** · 학습 시간 **2일 4시간**. 설정 `configs/dfine/`·`dfine_l960_3gpu_pod.yml`, 재현 절차 `HANDOFF.md`.
 - **2-스테이지**: `stop_epoch 108` — ep0–107(stg1, 강증강) → ep108–119(stg2, 증강 off·EMA restart). **release = `best_stg2.pth`**(stg2 최고점), 비교용 `best_stg1.pth` 병존.
@@ -452,11 +452,9 @@ python scripts/train.py
 |---|---:|---:|---:|---:|---:|---:|---:|
 | **best_stg2** | **0.7346** | 0.9696 | 0.8442 | 0.6655 | 0.8078 | 0.8424 | 0.7969 |
 
-![dfine-l960 curves](reports/dfine_l960_curves.png)
+> ℹ️ 위 수치는 **merged-val**(학습 val 분할) 기준 — 상단 held-out test(DUT/Maciullo) 표와 **평가셋이 달라 직접 비교 불가**. yolo26l과의 정면 비교가 필요하면 `best_stg2.pth`에 `scripts/dfine_eval.py`(→ `reports/dfine_l960_eval.json`)를 test셋으로 실행(후속 과제).
 
-> ⚠️ **평가셋 주의**: 위 수치·그래프의 D-FINE-L은 **merged-val**(학습 val 분할) COCO eval이고, yolo26l-P2(H·I)·D-FINE-N 표는 **held-out test**(DUT/Maciullo)라 **평가셋이 다름 → 절대 높이 직접 비교 불가**(우측 패널은 참고 위치만). yolo26l과의 동일-test 정면 비교는 `best_stg2.pth`에 `scripts/dfine_eval.py`(→ `reports/dfine_l960_eval.json`)를 돌려야 하며, 이는 **후속 과제**로 남김.
-
-- **산출물**: metric `reports/dfine_l960_metrics.json`(+`.md` epoch별 표) · 학습 로그 `reports/dfine_l960_train_log.txt`(epoch별 COCO eval) · 곡선 `reports/dfine_l960_curves.png` · 곡선 생성 `scripts/plot_dfine_l_curves.py`.
+- **산출물**: 학습 로그 `reports/dfine_l960_train_log.txt` (epoch별 COCO eval · best AP 포함).
 - **가중치 배포**: `best_stg2.pth` (477MB) — GitHub 100MB 한도 초과로 리포지토리 미포함. **Google Drive**: ⏳ 업로드 예정 <!-- DRIVE_LINK: 여기에 공유 링크 기재 -->. (참고: `best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`는 RunPod 볼륨 `/workspace/runs/merged_dfine_l_960/`에 보관.)
 
 ---
