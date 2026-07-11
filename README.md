@@ -22,20 +22,44 @@
 
 ## 성능 지표 (모델 선택 기준)
 
-### 정확도 (150 epochs) — `weights/metrics.json` (test 기준; val 지표는 json 참조)
+### 정확도 — 마스터표 (전 모델 통일 평가, held-out test)
 
-| 모델 | imgsz | mAP50 | mAP50-95 | Precision | Recall | Params(M) | FLOPs(G) | best.pt |
-|------|------:|------:|---------:|----------:|-------:|---------:|--------:|--------:|
-| yolo26n | 640 | 0.951 | 0.648 | 0.963 | 0.922 | 2.5 | 5.8 | 5.4 MB |
-| **yolo26n** | **960** | **0.968** | **0.699** | 0.976 | 0.936 | 2.5 | 13.0 | 5.5 MB |
-| yolo26s | 640 | 0.958 | 0.681 | 0.968 | 0.945 | 9.9 | 22.5 | 20.3 MB |
-| **yolo26s** | **960** | **0.970** | **0.723** | 0.981 | 0.956 | 9.9 | 50.6 | 20.4 MB |
+전 구성(yolo·D-FINE 10종)을 **동일 test·동일 평가기·동일 지표**로 재측정한 정확도 단일 출처(SoT)다.
+생성물: [`reports/master_table.md`](reports/master_table.md)(`scripts/build_master_table.py`) · 원자료 `reports/unified/*.json`.
 
-> Params·FLOPs는 하드웨어 독립 복잡도다. **FLOPs(G)**: 각 행 imgsz 기준, ultralytics fused,
-> **2×MAC 관례**(곱·합 각 1회 = MACs×2), 정밀도 무관. FLOPs ∝ 입력 픽셀 → 960은 640의 약 2.25배.
+| 모델 | ref | train | imgsz | DUT AP50 | DUT AP50-95 | DUT far(<16px) | DUT <8px | DUT FP/img | Maci AP50 | Maci AP50-95 | Maci far(<16px) | Maci <8px | Maci FP/img |
+|---|:--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| yolo26n | A | DUT | 640 | 0.923 | 0.630 | 0.925 | 0.882 | 0.063 | 0.523 | 0.196 | 0.359 | 0.091 | 0.213 |
+| yolo26n | B | DUT | 960 | 0.947 | 0.682 | 0.960 | 0.963 | 0.071 | 0.493 | 0.176 | 0.353 | 0.091 | 0.210 |
+| yolo26s | — | DUT | 640 | 0.946 | 0.670 | 0.952 | 0.897 | 0.057 | 0.534 | 0.206 | 0.364 | 0.182 | 0.171 |
+| yolo26s | — | DUT | 960 | 0.946 | 0.709 | 0.972 | 0.949 | 0.041 | 0.486 | 0.178 | 0.247 | 0.000 | 0.157 |
+| yolo26n | C | merged | 640 | 0.874 | 0.597 | 0.820 | 0.801 | 0.064 | 0.826 | 0.426 | 0.783 | 0.455 | 0.047 |
+| yolo26n | D | merged | 640 | 0.915 | 0.632 | 0.876 | 0.816 | 0.041 | 0.791 | 0.403 | 0.748 | 0.273 | 0.066 |
+| yolo26n-P2 | E/F | merged | 960 | 0.924 | 0.673 | 0.933 | 0.890 | 0.067 | 0.831 | 0.429 | 0.793 | 0.636 | 0.077 |
+| yolo26l-P2 | H/I | merged | 960 | 0.959 | 0.755 | 0.960 | 0.941 | 0.023 | 0.842 | 0.437 | 0.783 | 0.727 | 0.056 |
+| D-FINE-N | — | merged | 640 | 0.950 | 0.706 | 0.947 | 0.941 | 0.081 | 0.865 | 0.423 | 0.838 | 0.636 | 0.192 |
+| **D-FINE-L** | — | merged | 960 | **0.973** | **0.778** | **0.987** | **0.971** | 0.056 | **0.907** | **0.456** | 0.798 | **0.727** | 0.161 |
 
-- imgsz **960이 640 대비 test mAP50-95 +4~5%p** (소형 객체 ~77% → 해상도 효과 큼). 단 추론 비용 ↑(입력 2.25배).
-- merged 데이터셋 학습 모델 성적·구성별 기여: [Ablation](#ablation). 추론 예시: [Demo](#demo-추론-예시).
+> 전 모델 **동일 조건**: held-out test(DUT-test 2200장·Maciullo-test 2625장) · **faster-coco-eval** ·
+> **conf 0.25 · IoU-match 0.5** · side@640 size-bin. far = <16px(=<8 + 8-16) recall.
+> **AP는 conf 0.25 운영점 필터 COCO** — ultralytics val(저conf 표준)과 산출기가 달라 old 표보다 낮게 측정되나
+> **전 모델 상호 직접 비교 가능**(이전 3종 혼재 표를 이 하나로 통일). `ref` = [Ablation](#ablation) 행(A~I). 전체 size-bin recall은 `reports/unified/<key>.json`.
+
+- **D-FINE-L이 전 도메인 최고**: DUT AP50 0.973·AP50-95 0.778, Maci AP50 0.907. far(<16px)도 DUT 0.987로 1위.
+- imgsz **960이 640 대비 DUT AP50-95 향상**(A→B +5.2pt) — 소형 객체 ~77%라 해상도 효과 큼. 단 추론 비용 ↑(입력 2.25배).
+- DUT-only(A·B·s) 모델은 **Maciullo 붕괴**(AP50 0.49~0.53) = 도메인 병합 없이는 이전 불가. 구성별 기여 분해: [Ablation](#ablation). 추론 예시: [Demo](#demo-추론-예시).
+
+**모델 복잡도** (하드웨어 독립):
+
+| 모델 | imgsz | Params(M) | FLOPs(G) | best.pt |
+|------|------:|---------:|--------:|--------:|
+| yolo26n | 640 | 2.5 | 5.8 | 5.4 MB |
+| yolo26n | 960 | 2.5 | 13.0 | 5.5 MB |
+| yolo26s | 640 | 9.9 | 22.5 | 20.3 MB |
+| yolo26s | 960 | 9.9 | 50.6 | 20.4 MB |
+
+> **FLOPs(G)**: 각 행 imgsz 기준, ultralytics fused, **2×MAC 관례**(곱·합 각 1회 = MACs×2), 정밀도 무관.
+> FLOPs ∝ 입력 픽셀 → 960은 640의 약 2.25배. D-FINE 복잡도는 [DETR 절 스펙표](#detr-계열-1차--d-fine-n640-결과).
 
 ### 추론 속도 — GPU (RTX 4090)
 
@@ -101,41 +125,42 @@ imgsz 960(입력 `[1,3,960,960]`) yolo26n_960 10.0/5.1/**3.2** MB · yolo26s_960
 ## Ablation
 
 구성별 기여 분해 — yolo26n(A–F) · **yolo26l(H·I)**, seed 0, 파이프라인 동일. 미측정 = "—".
-AP는 **ultralytics val 평가 알고리즘** 기준(PR 곡선 면적 계산이 COCO eval과 미세 차 ~0.5pt).
+AP·far·FP는 전부 **마스터표와 동일한 COCO 평가**(held-out test·faster-coco-eval·conf 0.25·IoU 0.5) — 위 [마스터표](#정확도--마스터표-전-모델-통일-평가-held-out-test)와 같은 수치다(더는 평가기 혼재 없음).
 
 > **far 기준** = 픽셀 크기: GT 한 변 환산 `sqrt(w·h)×640` **< 16px**인 객체의 recall.
 > **<8px** = far에서 극원거리, 최난이도 꼬리.
 
 | # | merged | 960학습 | P2 | 1280추론 | ep | DUT AP50 | DUT AP50-95 | DUT far | Maci AP50 | Maci AP50-95 | Maci far |
 |---|:---:|:---:|:---:|:---:|---:|---:|---:|---:|---:|---:|---:|
-| A (old) | | | | | 150 | 0.951 | 0.648 | 0.925 | 0.601 | 0.216 | 0.359 |
-| B | | ✓ | | | 150 | 0.968 | 0.699 | 0.960 | 0.591 | 0.199 | 0.354 |
-| C | ✓ | | | | 100 | 0.927 | 0.619 | 0.820 | **0.891** | 0.445 | 0.783 |
-| D | ✓ | | | | 300 | 0.950 | 0.650 | 0.876 | 0.858 | 0.415 | 0.748 |
-| E | ✓ | ✓ | ✓ | | 100 | 0.966 | 0.690 | 0.933 | 0.888 | 0.447 | 0.793 |
-| F (=E, 추론만 1280) | ✓ | ✓ | ✓ | ✓ | 100 | 0.967 | 0.694 | 0.943 | 0.885 | 0.437 | **0.803** |
-| **H (l-P2)** | ✓ | ✓ | ✓ | | 100 | **0.982** | **0.769** | 0.960 | 0.888 | **0.450** | 0.783 |
-| I (=H, 추론만 1280) | ✓ | ✓ | ✓ | ✓ | 100 | 0.982 | 0.766 | **0.968** | 0.888 | 0.441 | 0.793 |
+| A (old) | | | | | 150 | 0.923 | 0.630 | 0.925 | 0.523 | 0.196 | 0.359 |
+| B | | ✓ | | | 150 | 0.947 | 0.682 | 0.960 | 0.493 | 0.176 | 0.353 |
+| C | ✓ | | | | 100 | 0.874 | 0.597 | 0.820 | 0.826 | 0.426 | 0.783 |
+| D | ✓ | | | | 300 | 0.915 | 0.632 | 0.876 | 0.791 | 0.403 | 0.748 |
+| E | ✓ | ✓ | ✓ | | 100 | 0.924 | 0.673 | 0.933 | 0.831 | 0.429 | 0.793 |
+| F (=E, 추론만 1280) | ✓ | ✓ | ✓ | ✓ | 100 | 0.925 | 0.672 | 0.943 | 0.839 | 0.425 | **0.803** |
+| **H (l-P2)** | ✓ | ✓ | ✓ | | 100 | **0.959** | **0.755** | 0.960 | 0.842 | **0.437** | 0.783 |
+| I (=H, 추론만 1280) | ✓ | ✓ | ✓ | ✓ | 100 | **0.959** | 0.752 | **0.968** | **0.852** | 0.434 | 0.793 |
 
 ![training curves](reports/training_curves.png)
 
 - 곡선(검증셋 DUT-val 공통): **학습 해상도(960) = 성능 최대폭 향상**, 640은 300ep로도 960 미달. merged의 Maciullo 도메인 이득은 이 곡선에 미반영.
-- 병합(A→C): Maciullo +29pt·DUT far −10.5pt → epochs(C→D)·960+P2(C→E)로 회복. B(DUT-only 960)는 Maciullo 붕괴(0.591) — 해상도 단독으론 도메인 이전 없음.
-- 모델 스케일(E→H, n→l): DUT AP50-95 **+7.9pt**·far +2.7pt, Maci <8px 0.636→0.727.
-- 추론 해상도 1280(E→F, H→I)은 AP 중립·그러나 far의 경우 이득.
+- 병합(A→C): **Maciullo AP50 +30pt**(0.523→0.826)·DUT far −10.5pt(0.925→0.820) → epochs(C→D)·960+P2(C→E)로 회복. B(DUT-only 960)는 Maciullo 붕괴(0.493) — 해상도 단독으론 도메인 이전 없음.
+- 모델 스케일(E→H, n→l): DUT AP50-95 **+8.2pt**(0.673→0.755)·far +2.7pt, Maci <8px 0.636→0.727.
+- 추론 해상도 1280(E→F, H→I)은 AP 중립·그러나 far·<8px는 이득(F/I 측정, `reports/unified/*_1280_*.json`).
 - 상세: [reports/ablation_matrix.md](reports/ablation_matrix.md).
 
 **배포 권장** (근거는 위 표):
 
 | 경로 | 모델 | 이유 |
 |---|---|---|
-| 클라우드(4090) | **H: merged-l-P2-960** + 추론 1280 (=I) | 전 도메인 최고/동급, DUT far 0.968, 4090 FP16 103FPS |
-| 클라우드 경량 대안 | E: merged-P2-960 + 추론 1280 (=F) | H 대비 −7pt(AP50-95), 4.2ms(236FPS) |
+| 클라우드(4090) — 최고 정확도 | **D-FINE-L@960** | 전 모델 최고(DUT/Maci AP50 0.973/0.907, DUT far 0.987). ncnn-Vulkan 이식 불가라 클라우드 전용 |
+| 클라우드 — yolo 계열 최고 | H: merged-l-P2-960 + 추론 1280 (=I) | yolo 중 최고, DUT far 0.968, 4090 FP16 103FPS |
+| 클라우드 경량 대안 | E: merged-P2-960 + 추론 1280 (=F) | H 대비 −8pt(AP50-95), 4.2ms(236FPS) |
 | 온디바이스(ML2, ncnn-Vulkan) | **D: merged-300ep** (640) | FP/img 최저 |
 
-### Maciullo 라벨 감사 — AP50 0.89 천장 원인
+### Maciullo 라벨 감사 — AP50 ~0.9 천장 원인
 
-전 구성(A~I)에서 Maciullo AP50이 0.86-0.89에 수렴 → l-P2 오답 전수 시각화(FN 406·FP 146) 후
+전 구성에서 Maciullo AP50이 정체(COCO 기준 yolo 0.79~0.85·D-FINE-N 0.865·**최고 D-FINE-L 0.907**) → l-P2 오답 전수 시각화(FN 406·FP 146) 후
 육안 판정(2026-07-08). **FP의 68%가 conf≥0.5** — 확인 결과 상위 케이스 다수는 **GT 박스 품질 문제**로,
 모델이 맞게 탐지해도 IoU<0.5가 되어 FP+FN 이중 감점 → AP 천장 형성. 색: 초록=GT, 빨강=FP 예측.
 
@@ -262,7 +287,7 @@ python scripts/dataset_stats.py   # 박스 크기 히스토그램 + 샘플 박�
 - 578개 영상 파생이나 **HF mirror에 video_id 없음** → sequence provenance 복원 불가. **leakage-safe fallback**: Maciullo train 전량 → merged train, val은 **DUT 공식 val만**, 원본 test 2개(DUT-test·Maciullo-test)는 별도 eval로 보존.
 - 병합 결과 `/mnt/ssd_0/dataset/merged_drone`: train **56,646**(DUT 5,200 + Maciullo 51,446) / val 2,600 / test_dut 2,200 · test_maciullo 2,625.
 - 파이프라인: `scripts/fetch_maciullo.py`(데이터셋 취득) → `scripts/merge_datasets.py`(YOLO 형식 통일) → `scripts/analyze_merge.py`(스케일 및 배경 비교). 데이터셋 분석·비교·split 매핑은 `reports/`, old vs new 효과는 `reports/old_vs_new.md`.
-- 효과 요약: Maciullo 도메인 mAP50 0.601→0.891·FP/img −78%, DUT 초소형은 소폭 하락, 즉, trade-off.
+- 효과 요약(COCO, [Ablation](#ablation) A→C): Maciullo AP50 0.523→0.826·FP/img −78%(0.21→0.05), DUT 초소형은 소폭 하락, 즉, trade-off.
 
 ```bash
 .venv/bin/python scripts/fetch_maciullo.py      # HF → images + COCO 어노테이션 + AUDIT.md
@@ -356,7 +381,7 @@ python scripts/train.py
 > **배포 방침**: **온디바이스(ML2) = yolo26n** (ncnn-Vulkan GPU 경로·속도), **클라우드 = D-FINE-L**
 > (query 기반 원거리 강점, L@960 학습 완료). D-FINE은 ncnn-Vulkan 이식 불가라 ML2 주력은 yolo26n 유지.
 
-- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(더 큰 모델, 클라우드용) · **D-FINE-N@640**(DETR류) · **D-FINE-L@960**(클라우드 주력) → [Ablation](#ablation) · [D-FINE-L 결과](#detr-계열-2차--d-fine-l960-결과)
+- 완료 ✅: imgsz 960 · P2 head(960+P2 결합) · 추론 1280 · 데이터 병합 10× · **yolo26l-P2@960**(더 큰 모델, 클라우드용) · **D-FINE-N@640**(DETR류) · **D-FINE-L@960**(클라우드 주력) · **전 모델 COCO 지표 통일**([마스터표](#정확도--마스터표-전-모델-통일-평가-held-out-test)·`scripts/unified_eval.py`) → [Ablation](#ablation) · [D-FINE-L 결과](#detr-계열-2차--d-fine-l960-결과)
 - 진행 🔄: temporal(detect-then-track) 후순위 검토
 - 보류: hard-negative(NEG_DIR) — Maciullo all-positive라 배경 FP 감소엔 별도 negative 셋 필요
 
@@ -375,20 +400,13 @@ python scripts/train.py
 
 - GFLOPs는 **1.2×**인데 CPU 지연은 **2×** — FLOPs가 아니라 커널 효율(deformable attention·LayerNorm의 CPU 비친화) 차이로 인한 것으로 추정. (산출: yolo=ultralytics profile, D-FINE=calflops — 동일 MACs×2 관례.)
 
-**정확도 (held-out test) — AP는 전부 COCO eval로 통일**(`annotations/*.json`·faster-coco-eval, 출판 표준). yolo·D-FINE를 같은 평가기로 재 직접 비교 가능. far/FP = [동일 greedy 프로토콜](reports/ablation_matrix.md)(conf 0.25·IoU 0.5). ※ 상단 성능표·Ablation(A~I)은 ultralytics val 기준이라 동일 모델이 표 간 ~0.5pt 차이(평가기 관례, 실측):
-
-| 모델 (640) | DUT AP50/AP50-95 | DUT far | DUT <8px | Maci AP50/AP50-95 | Maci far | FP/img(DUT·Maci) |
-|---|---|---:|---:|---|---:|---|
-| yolo26n 100ep (C) | 0.922 / 0.623 | 0.820 | — | **0.893** / **0.460** | 0.783 | 0.06 · 0.05 |
-| yolo26n 300ep (D) | 0.944 / 0.647 | 0.876 | 0.706 | 0.854 / 0.427 | 0.748 | 0.04 · 0.07 |
-| **D-FINE-N 220ep** | **0.951** / **0.705** | **0.944** | **0.941** | 0.866 / 0.428 | **0.818** | 0.08 · 0.20 |
-| **D-FINE-L 120ep (960)** | **0.973** / **0.778** | **0.987** | **0.971** | **0.908** / **0.456** | 0.798 | 0.06 · 0.16 |
+**정확도 (held-out test)**: D-FINE-N·L 포함 전 모델 수치는 상단 [마스터표](#정확도--마스터표-전-모델-통일-평가-held-out-test)로 통일(held-out test·faster-coco-eval·conf 0.25·IoU 0.5). D-FINE-N 요약 — DUT **AP50 0.950 / AP50-95 0.706 · far 0.947 · <8px 0.941**(FP/img 0.08), Maci **0.865 / 0.423 · far 0.838 · <8px 0.636**(FP/img 0.19). yolo26n C/D와 동일 640·pretrained 선상, far·소형에서 우위(아래).
 
 ![dfine vs yolo26n curves](reports/dfine_n_vs_yolo26n_curves.png)
 
-> 위 곡선은 epoch별 DUT-val 학습 추세(D-FINE=COCO eval·yolo=ultralytics val, 평가기 상이) — **절대 높이 직접 비교 말고 추세만** 볼 것. 최종 정확도 비교는 위 COCO 통일 표.
+> 위 곡선은 epoch별 DUT-val 학습 추세(D-FINE=COCO eval·yolo=ultralytics val, 학습시점 평가기 상이) — **절대 높이 직접 비교 말고 추세만** 볼 것. 최종 정확도 비교는 상단 마스터표.
 
-- **far-recall(동일 프로토콜): DUT +6.8pt(vs D)·Maciullo +3.5pt(vs C)** — 640·P2 없이 yolo26n-P2@960(E: 0.933)급 far. query 방식인 DETR 계열의 small object detection 강점 확인.
+- **far-recall(동일 프로토콜): DUT +7.1pt(vs D 0.876→0.947)·Maciullo +5.5pt(vs C 0.783→0.838)** — 640·P2 없이 yolo26n-P2@960(E: 0.933)급 far. query 방식인 DETR 계열의 small object detection 강점 확인.
 
 **정성 예시 — D-FINE 검출 / yolo26n 완전 미검출 (극소형)**:
 
@@ -447,13 +465,13 @@ python scripts/train.py
 - **2-스테이지**: `stop_epoch 108` — ep0–107(stg1, 강증강) → ep108–119(stg2, 증강 off·EMA restart). **release = `best_stg2.pth`**(stg2 최고점), 비교용 `best_stg1.pth` 병존.
 - **추론**: DETR 계열 스케일 특화로 **960 고정**(1280 상향은 붕괴 — [위 D-FINE-N 분석](#추론-입력화질-설정-가이드--계열별-양상)과 동일 성질).
 
-**정확도 (DUT-val · COCO eval)** — best = **ep115 (stg2)**:
+**학습 곡선 요약 (DUT-val · COCO eval)** — 수렴 best = **ep115 (stg2)**. *held-out test 비교 수치는 [마스터표](#정확도--마스터표-전-모델-통일-평가-held-out-test)*:
 
 | 지표 | AP@[.50:.95] | AP50 | AP75 | AP_s | AP_m | AP_l | AR@100 |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | **best_stg2** | **0.7346** | 0.9696 | 0.8442 | 0.6655 | 0.8078 | 0.8424 | 0.7969 |
 
-> ℹ️ 위 수치는 **DUT-val** COCO eval 기준 — 학습 검증 분할은 **DUT만**(Maciullo는 train에만 포함, `reports/merge_stats.json`). repo 상단 yolo·D-FINE-N 표는 held-out **test**(DUT-test·Maciullo-test)라 split·평가기(ultralytics vs faster-coco-eval)가 달라 직접 비교 불가. held-out test(DUT-test·Maciullo-test)에서 faster-coco-eval로 측정한 동일-조건 수치는 위 **COCO 통일표의 D-FINE-L 행**(`reports/dfine_l960_eval.json`) 참조.
+> ℹ️ 위 수치는 **DUT-val** COCO eval 기준 — 학습 검증 분할은 **DUT만**(Maciullo는 train에만 포함, `reports/merge_stats.json`). repo 상단 yolo·D-FINE-N 표는 held-out **test**(DUT-test·Maciullo-test)라 split·평가기(ultralytics vs faster-coco-eval)가 달라 직접 비교 불가. held-out test(DUT-test·Maciullo-test)에서 faster-coco-eval로 측정한 동일-조건 수치는 상단 [**마스터표의 D-FINE-L 행**](#정확도--마스터표-전-모델-통일-평가-held-out-test)(`reports/dfine_l960_eval.json` = `reports/unified/dfine_l_960_m120.json`) 참조.
 
 - **산출물**: 학습 로그 `reports/dfine_l960_train_log.txt` (epoch별 COCO eval · best AP 포함).
 - **가중치 배포**: `best_stg2.pth` (477MB) — GitHub 100MB 한도 초과로 리포지토리 미포함. **Google Drive**: ⏳ 업로드 예정 <!-- DRIVE_LINK: 여기에 공유 링크 기재 -->. (참고: `best_stg1.pth`·`last.pth`·`checkpoint00XX.pth`는 RunPod 볼륨 `/workspace/runs/merged_dfine_l_960/`에 보관.)
@@ -482,7 +500,7 @@ python scripts/train.py
 | yolo26n merged (온디바이스) | 640 letterbox | ML2 CPU/Vulkan 속도 |
 | yolo26l-P2 (클라우드) | **1280** letterbox | H→I 무비용 far 이득 |
 | D-FINE-N | **640×640 정사각**(=학습) | 학습 화질과 동일하게 |
-| D-FINE-L@960 (학습 예정) | 960×960 정사각(=학습) 전제 | 학습 화질과 동일하게 |
+| D-FINE-L@960 | 960×960 정사각(=학습) | 학습 화질과 동일하게 (test 실측 = 마스터표) |
 
 - 원리: YOLO = 순수 conv → 스케일 일반화. DETR = 쿼리·anchor 학습 스케일 특화 → 해상도 잠금.
 - 한 줄 규칙: **D-FINE은 학습 입력을 그대로, YOLO는 최적 추론 해상도를 별도 탐색.**
